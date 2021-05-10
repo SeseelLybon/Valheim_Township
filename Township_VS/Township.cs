@@ -26,16 +26,10 @@ namespace Township
     {
         public const string PluginGUID = "com.jotunn.Township";
         public const string PluginName = "Township";
-        public const string PluginVersion = "0.1.0.1";
-
-        Texture2D testTex;
-        Sprite testSprite;
+        public const string PluginVersion = "0.1.0.2";
 
         private void Awake()
         {
-
-
-            
 
 
             // Do all your init stuff here
@@ -43,7 +37,7 @@ namespace Township
             Config.Bind<int>("Main Section", "Example configuration integer", 1, new ConfigDescription("This is an example config, using a range limitation for ConfigurationManager", new AcceptableValueRange<int>(0, 100)));
 
             // Jotunn comes with its own Logger class to provide a consistent Log style for all mods using it
-            Jotunn.Logger.LogMessage($"I think, therefore I am");
+            Jotunn.Logger.LogWarning($"Hello World, from the Township plugin");
 
 
             ItemManager.OnVanillaItemsAvailable += addHeart;
@@ -51,55 +45,37 @@ namespace Township
 
         private void addHeart()
         {
-
-
-            //CustomItem CI = new CustomItem("HeartSettlement", "guard_stone");
-            //
-            //ItemManager.Instance.AddItem(CI);
-            //
-            // Replace vanilla properties of the custom item
-            //var itemDrop = CI.ItemDrop;
-            //
-            //itemDrop.m_itemData.m_shared.m_name = "$item_HeartSettlement";
-            //itemDrop.m_itemData.m_shared.m_description = "$item_HeartSettlement_desc";
-
-            // Add translations for the custom piece in addEmptyItems
             LocalizationManager.Instance.AddLocalization(new LocalizationConfig("English")
             {
                 Translations =
                 {
-                        { "HeartSettlement", "Heart of the Settlement" }
+                        { "piece_HeartSettlement", "Heart of the Settlement" },
+                        { "piece_HeartSettlement_desc", "Currently doesn't do anything" }
+
                  }
             });
 
-            CustomPiece CP = new CustomPiece("$HeartSettlement", "Hammer");
-            var piece = CP.Piece;
+            Jotunn.Logger.LogWarning($"1");
+            CustomPiece CP = new CustomPiece("piece_heartSettlement", "guard_stone", "Hammer");
 
-            testTex = AssetUtils.LoadTexture("Assets/Texture2D/sactx-2048x2048-Uncompressed-IconAtlas-61238c20.png");
-            testSprite = Sprite.Create(testTex, new Rect(0f, 0f, testTex.width, testTex.height), Vector2.zero);
 
-            piece.m_icon = testSprite;
+            Jotunn.Logger.LogWarning($"2");
+            CP.Piece.m_name = "piece_HeartSettlement";
+            CP.Piece.m_description = "piece_HeartSettlement_desc";
 
-            var prefab = CP.PiecePrefab;
-            prefab.GetComponent<MeshRenderer>().material.mainTexture = testTex;
+            Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
 
+            CP.PiecePrefab.AddComponent<SMAI>();
+
+
+            Jotunn.Logger.LogWarning($"3");
             PieceManager.Instance.AddPiece(CP);
 
+            Jotunn.Logger.LogWarning($"4");
             // You want that to run only once, Jotunn has the item cached for the game session
             ItemManager.OnVanillaItemsAvailable -= addHeart;
+            Jotunn.Logger.LogWarning($"5");
 
         }
-
-
-
-
-#if DEBUG
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.F6))
-            { // Set a breakpoint here to break on F6 key press
-            }
-        }
-#endif
     }
 }
