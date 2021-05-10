@@ -1,0 +1,116 @@
+# The Premise of Township 
+
+
+(to lazy to put it somewhere better)
+have the territory system work for monsters so that you can't start a settlement everywhere and first have to 'claim an area from nature'.
+This could work in tandem with the Rise of Nations territory idea of pushing back against that.
+This also would be interesting for siege engines, preventing you from making them too close to goblin villages.
+
+## The idea
+Township is a pet project where I want to create a Banished-like experience of lording (yarling?) over smaller settlements.
+The idea is that the player places a "Heart of the Settlement" object. Within the range of the Heart, the player can place other totems to add functionality to the settlement. In later phases NPC's and a Settlement Manager AI can then use these totems to do things settlement-like.
+ 
+ - "The Heart" - the core of a settlement. This is where the Settlement Manager AI will reside and work from. Doesn't do much on it's own.
+ 	Spawns a big 'anti-spawn' zone for monsters to create a save zone.
+
+ - Expander totems make the area the settlement covers bigger. Visually will be the base of a totem
+ - Extender totems add functionality to the exapander totems; a Forge totem, Stonecutter's Totem, Artisan's Totem, Ward Totem ect.
+ - Definer totems define a space as something. For example a House totem tell the SMAI that there is a house there. Or a warehouse totem, farm totem, ect.
+ - Sub-definer totems define a space within a space. For example having a Dock Totem and then a Pier totem telling the Dock totem how many piers there are for ships to moar. Or Room Totems for Inns to help define how many rooms there are within an Inn.
+
+As much as I'd like to have everything work diagetically and physically, I've decided that the visuals of something working is enough in some cases.
+For example in a later stage with trade/logistics between two settlements, as cool as it'd be to have a ship travel physically I think it's not worth the trouble to do that. As such I'll simulate it's travel in the background by numbers. At a later stage I might spawn fake ships to represent the trade route.
+
+## Phases tl;dr/overview
+
+### Phase 1
+Phase 1 will be about getting the basic totems to work (the Heart, extenders, expanders)
+	1) Getting placeable totems that I can attach scripts to.
+	2) The ability to create a 'Settlement' and use totems to expand what's considered part of the Settlement.
+	3) Adding the build functionality to the expander totems so that if there is a forge present, you have access to that forge in the whole Settlement and it's expanded area's.
+
+### Phase 2
+Phase 2 will be about making basic definer totems to work (Warehouse, Farmland, Houses)
+	1) Adding totems that define the presence of something, initially just a counter in the SMAI.
+	2) Have the SMAI (intelligently) check if certain objects are available - chests for the warehouse, plants for Farmland and beds for houses.
+		Then see if I can look further (check if the bed has a roof and if the plants are harvestable)
+	3) Ideally, implement a version of Crafting-From-Containers that's integrated in this mod using the totems to check for valid containers more intelligently.
+
+### Phase 3
+Phase 3 will be about adding basic NPC's into the system doing menial labour (manning smelter, kiln, ect)
+	1) Add in an NPC that I can work in. (Look at RRR_NPC's?)
+	2) Have the NPC_AI do something simple (or pretends to do something simple!) using totem functionality.
+		(Probably should add a quick simple to set the job for any NPC)
+	3) Fine tune the jobs it can do, add more jobs - farming, smelting, milling, spinning, firetender, repairing, complain to the player they don't have a job to do
+	4) Have the NPC's need a house to sleep in. What the work schedule ends up being I don't know. iirc a day is 20 minutes and if that means the AI are going home so often it might not be preferred.
+
+### Phase 4
+Phase 4 will be about making advanced definer totems to work (Docks & piers, walls & gates, mines and fishing spots)
+	1) Create more Definer totems to have NPC's do more advanced tasks; unloading ship's cargo from docks, tell the SMAI where walls are so repairmen can focus on those, a mine totem and a miner job that tells NPC's to dig at a specific boulder of copper, try to see if NPC's can fish.
+	2) Sub-Definer totems; Piers for Docks, so the SMAI knows how many ships can moar, An Inn and associated Room totems so the Inn knows how many rooms it has space for (without making them look like houses), a canteen totem so NPC's can occasionally feast and dine there.
+	Gates and waypoints that NPC's can use to pathfind better (over long distances).
+	
+
+### Phase 5
+Phase 5 will be about making more advanced NPC's (Setting up crafting rules, housing and feeding needs, guards and soldiers)
+	1) NPC needs; consuming food, needing certain comfort levels in their houses.
+	2) NPC's that act as soldiers or guards. Extra totems to help gaurds to patrol around and ect.
+	3) Rimworld like crafting rules where Crafting NPC's will try to craft specific amounts of something, for example making sure there are always 100 elemental arrows of each time, a cook that makes sure there are always 20 potions of some kind and all vegitables are converted into a higher teir.
+
+### Phase 6
+Phase 6 will be about connecting multiple settlements together.
+	1) Have settlements connect if criteria are met. Initially for small things like mining outposts, later for larger settlements like villages.
+	2) Mostly comes in the form of hauling resources around - ore from mines and food to mines. And general trade. (Resources take a while to arrive, max resources, max ships at the docks to send/recieve, ect)
+	3) Land route totems that settlements can use to simulate a land connection.
+	4) Naval route system to connect ports.
+	5) Add restrictions, pathfinding and such.
+	6) Have boats or travelers spawn between totems. Most likely just for visuals.
+
+### Phase 7
+Phase 7 will be about politics. Giving the NPC's more agency and more demands.
+	???
+	No real idea, if I even get this far.
+	Something like policies, laws and NPC happiness. Maybe a currency and the ability for NPC's to revolt?
+
+
+## Expanded thoughts
+
+
+The first problem I want to tackle is the ability to define abstracts buildings in an abstract world. While one could write an algoritm that says "if it has x y and z, this is a house", I think in the end it's better to let the player decide where a house is and then write a much simpler algoritm that checks if that place contains a valid house in simple terms like if the bed has a roof and what it's (or the totem's) comfort level is...
+
+The idea is to let players make special 'totems' (or tag a generic totem) visually like the ward and place them around points of interest.
+There is a main totem that will function as the "heart of the settlement". This will be mainly used to define this place as one settlement, regardless of the size or shape or palce, and then use totems to either expand that area, extend functionallity or define a spot.
+
+For example; the player first places a "Heart of the Settlement" and names it. Then within the base area is a place with a large amount of chests that you use as a warehouse. Inside that structure you place a warehouse totem.  The Settlement AI knows then that there is a warehouse in it's premise, where to find it. Any chests outside of the second totem aren't considered part of the warehouse.
+Whenever the player is within the premise of the Settlement, if they craft something it'll pull first from the inventory and then specifically from chests in the warehouse - and never from other chests.
+A third totem can then be placed around all the workstations you might have - a Workshop totem - which tells the Settlement it has a workshop. The main goal is that anywhere within the settlement is considered within range of that crafting table. The main goal being that you no longer need to play a large amount of stonecutting or forge tables around the settlement, instead I'll use the extending totems as something that's more convinient and visually pleasing.
+A forth totem could be a house totem which tells the settlement where to look for a bed -> if that bed has a roof -> if that bed/totem can get a high enough comfort level.
+A fifth totem could then be build where farmland is.
+
+In a later phase with NPC's, the NPC can be told where to find their home, where the warehouse is to draw goods from and the farmland where to work at.
+
+For programmers the idea with the totems is to sighnificantly reduce the searchspace for any functions they might cook up. Want to know where the kitchen is and ask the Heart of the Settlement totem if it has and then where said kitchen is, and search chests/cooking stations for functionality, rather than searching an arbetrarily large space.
+
+The second is that is should help with NPC's and AI walking around.
+Rather than the NPC's AI searching for tools, it asks the SettlementManager if it has the resources at all and then asks where to find them. Depending on the job system, it might chash those chests.
+
+A third is something like raids on the settlements; by telling where the enemies can find 'the big item', they have a much clearer goal to attack and players have a much bigger thing to defend.
+
+
+### Phase 2 - The AI
+
+something something something AI and NPC's and working
+
+### Phase 3 - Working together
+
+The idea is to give multiple settlements the ability to work together. The main idea is to set 'trade routes' that NPC's can take (I'll most likely do this in the background).
+For example, if there's a copper mine in the north, when set up correctly, it'll send those to a central location.
+
+
+### Phase 4 - Politics
+
+Giving players something to rule over and care about.
+Giving the settlers some form of demand and statishfaction.
+Policies per faction/settlement to give bonuses and penalties
+
+### Phase 5 A will of their own
