@@ -25,36 +25,34 @@ namespace Township
 
         public bool isActive = false;
 
+        public int Happiness = 100;
+        public int Expanders = 0;
+        public int Population = 0;
+
         private Piece m_piece;
 
-        private ZNetView m_nview;
+
 
         private void Awake()
         {
             //Jotunn.Logger.LogWarning($"Awakeing SMAI");
-
-            m_nview = GetComponent<ZNetView>();
-            m_piece = GetComponent<Piece>();
-            m_nview.m_persistent = true;
-
-
-
         }
 
         private void Start()
         {
-            if (m_piece.IsPlacedByPlayer())
-            {
-                m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness", 95));
-            }
+            //Jotunn.Logger.LogWarning($"Starting SMAI");
         }
 
+        
 
-        public void think()
+
+
+        private void think()
         {
-            m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness") -1);
-            Jotunn.Logger.LogInfo("thinking...");
+            Happiness -= 1;
+            Jotunn.Logger.LogMessage("Thinking...");
         }
+
 
 
         public string GetHoverName()
@@ -66,9 +64,7 @@ namespace Township
         public string GetHoverText()
         {
             // for the ward it's things like is_active and stuff.
-            return m_name +
-                "\nActive: " + isActive.ToString() +
-                "\nHappiness:" + m_nview.GetZDO().GetInt("Happiness").ToString();
+            return m_name + " " + isActive.ToString() + " " + Happiness.ToString();
         }
 
         public bool Interact(Humanoid user, bool hold)
@@ -76,25 +72,24 @@ namespace Township
             // Show SMAI gui on press
             // Let remane on hold?
 
-            if ( !hold )
+            if ( hold )
             {
 
                 if (isActive)
                 {
+                    isActive = true;
+                    InvokeRepeating("think", 5f, 10f);
+                }else
+                {
                     isActive = false;
                     CancelInvoke("think");
                 }
-                else
-                {
-                    isActive = true;
-                    InvokeRepeating("think", 5f, 10f);
-                }
 
-            }else if( hold )
-            {
-                m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness") + 1);
             }
-
+            if( !hold )
+            {
+                Happiness += 1;
+            }
             return false;
         }
 
