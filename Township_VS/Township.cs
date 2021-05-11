@@ -26,7 +26,9 @@ namespace Township
     {
         public const string PluginGUID = "com.jotunn.Township";
         public const string PluginName = "Township";
-        public const string PluginVersion = "0.1.0.2";
+        public const string PluginVersion = "0.1.0.6";
+
+        public string[] SettlementList;
 
         private void Awake()
         {
@@ -55,26 +57,21 @@ namespace Township
                  }
             });
 
-            Jotunn.Logger.LogWarning($"1");
+
+            // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
             CustomPiece CP = new CustomPiece("piece_heartSettlement", "guard_stone", "Hammer");
 
+            CP.Piece.m_name = "$piece_HeartSettlement";
+            CP.Piece.m_description = "$piece_HeartSettlement_desc";
 
-            Jotunn.Logger.LogWarning($"2");
-            CP.Piece.m_name = "piece_HeartSettlement";
-            CP.Piece.m_description = "piece_HeartSettlement_desc";
-
+            // Downside of duplicating the ward is that I got to rip out the PrivateArea script and put in the SMAI script.
+            // Seems to work without downside. While a rather expensive action, I only have to do it once (per unique piece).
             Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
-
             CP.PiecePrefab.AddComponent<SMAI>();
 
-
-            Jotunn.Logger.LogWarning($"3");
             PieceManager.Instance.AddPiece(CP);
 
-            Jotunn.Logger.LogWarning($"4");
-            // You want that to run only once, Jotunn has the item cached for the game session
             ItemManager.OnVanillaItemsAvailable -= addHeart;
-            Jotunn.Logger.LogWarning($"5");
 
         }
     }
