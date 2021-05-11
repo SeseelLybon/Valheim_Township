@@ -26,7 +26,7 @@ namespace Township
     {
         public const string PluginGUID = "com.jotunn.Township";
         public const string PluginName = "Township";
-        public const string PluginVersion = "0.1.0.6";
+        public const string PluginVersion = "0.1.0.7";
 
         public string[] SettlementList;
 
@@ -36,7 +36,7 @@ namespace Township
 
             // Do all your init stuff here
             // Acceptable value ranges can be defined to allow configuration via a slider in the BepInEx ConfigurationManager: https://github.com/BepInEx/BepInEx.ConfigurationManager
-            Config.Bind<int>("Main Section", "Example configuration integer", 1, new ConfigDescription("This is an example config, using a range limitation for ConfigurationManager", new AcceptableValueRange<int>(0, 100)));
+            //Config.Bind<int>("Main Section", "Example configuration integer", 1, new ConfigDescription("This is an example config, using a range limitation for ConfigurationManager", new AcceptableValueRange<int>(0, 100)));
 
             // Jotunn comes with its own Logger class to provide a consistent Log style for all mods using it
             Jotunn.Logger.LogWarning($"Hello World, from the Township plugin");

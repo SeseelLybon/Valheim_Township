@@ -31,16 +31,6 @@ namespace Township
 
         private ZNetView m_nview;
 
-        private GUIManager m_guiM;
-
-        /*
-        GameObject panel_main;
-        GameObject checkbox_Active;
-        GameObject text_SettlementName;
-        GameObject button_RenameSettlement;
-        GameObject button_ExitGUI;
-        */
-
 
         private void Awake()
         {
@@ -63,57 +53,24 @@ namespace Township
 
             if (isPlaced)
             {
-                Jotunn.Logger.LogError("Doing stuff to object that was placed by a player");
+                Jotunn.Logger.LogDebug("Doing stuff to object that was placed by a player");
 
                 m_nview.SetPersistent(true);
 
 
                 // Rather ugly code, gotta do something about it later
-                // fetch var, if var not there, return default, then set fetched var or default.
+                // fetch var, if var not there use default, then set fetched var or default.
                 m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness", 95));
 
-                settlementName = m_nview.GetZDO().GetString("settlementName", "no name");
+
+                settlementName = m_nview.GetZDO().GetString("settlementName", "Elktown");
                 m_nview.GetZDO().Set("settlementName", settlementName);
 
-                /*
-                m_guiM = GUIManager.Instance;
 
-                panel_main = m_guiM.CreateWoodpanel(
-                    GUIManager.PixelFix.transform,
-                    new Vector2(0.5f, 0.5f),
-                    new Vector2(0.5f, 0.5f),
-                    new Vector2(0f, 0f), 800f, 600f);
+                isActive = m_nview.GetZDO().GetBool("isActive", false);
+                m_nview.GetZDO().Set("isActive", isActive);
 
-                panel_main.SetActive(false);
 
-                button_ExitGUI = m_guiM.CreateButton(
-                    "X",
-                    panel_main.transform,
-                    new Vector2(0f, 0f), new Vector2(0f, 0f),
-                    new Vector2(50, 50), 50, 50
-                    );
-
-                checkbox_Active = m_guiM.CreateToggle(
-                    panel_main.transform,
-                    new Vector2(0f, 0f),
-                    350f, 350f);
-
-                text_SettlementName = m_guiM.CreateText(
-                    m_nview.GetZDO().GetString("settlementName"),
-                    panel_main.transform,
-                    new Vector2(0f, 0f), new Vector2(0f, 0f),
-                    new Vector2(150f, 150f),
-                    GUIManager.Instance.AveriaSerifBold, 18, GUIManager.Instance.ValheimOrange, true, Color.black,
-                    50, 50,
-                    false);
-
-                button_RenameSettlement = m_guiM.CreateButton(
-                    "Rename",
-                    panel_main.transform,
-                    new Vector2(0f, 0f), new Vector2(0f, 0f),
-                    new Vector2(250, 250), 50, 50
-                    );
-                */
             }
         }
 
@@ -140,10 +97,6 @@ namespace Township
 
         public bool Interact(Humanoid user, bool hold)
         {
-            // Show SMAI gui on press
-            // Let remane on hold?
-
-            //test if user == owner of piece
 
             if ( !hold )
             {
@@ -154,7 +107,6 @@ namespace Township
                 {
                     makeActive(true);
                 }
-                //ToggleSMAI_GUI(user);
 
             }
             else if( hold )
@@ -169,54 +121,21 @@ namespace Township
         {
             if ( toactive && !isActive) // if true and false
             {
+                m_nview.GetZDO().Set("isActive", true);
                 isActive = true;
                 InvokeRepeating("think", 5f, 10f);
             } else if (!toactive && isActive) // if false and true
             {
+                m_nview.GetZDO().Set("isActive", false);
                 isActive = false;
                 CancelInvoke("think");
             }
-            isActive = toactive;
         }
 
         public bool UseItem(Humanoid user, ItemDrop.ItemData item)
         {
             return false;
         }
-
-
-        // GUI Stuff //////////////////////////////////////////////////////////////
-
-        /*
-        private void ToggleSMAI_GUI(Humanoid user)
-        {
-            if ( panel_main.activeSelf )
-            {
-                panel_main.SetActive(false);
-                CancelInvoke("test_user_close");
-                Jotunn.Logger.LogInfo("Closing GUI");
-
-            } else
-            {
-                panel_main.SetActive(true);
-                last_GUI_user = user;
-                InvokeRepeating("test_user_close", 0f, 1f);
-                Jotunn.Logger.LogInfo("Opening GUI");
-            }
-        }
-
-        Humanoid last_GUI_user;
-        private void test_user_close() //  Humanoid user 
-        {
-            if( Vector3.Distance(last_GUI_user.GetCenterPoint(), m_piece.GetCenter()) >= 3f )
-            {
-                ToggleSMAI_GUI(last_GUI_user);
-                CancelInvoke("test_user_close");
-                last_GUI_user = null; // since this is a temp var, if this crashes somewhere, then I know the other place shouldn't touch this
-                Jotunn.Logger.LogInfo("Closing GUI because user is out of range");
-            }
-        }
-        */
 
     }
 }
