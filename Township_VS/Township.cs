@@ -26,9 +26,9 @@ namespace Township
     {
         public const string PluginGUID = "com.jotunn.Township";
         public const string PluginName = "Township";
-        public const string PluginVersion = "0.1.0.7";
+        public const string PluginVersion = "0.1.0.8";
 
-        public string[] SettlementList;
+        // public list<SMAI> settlementList;
 
         private void Awake()
         {
@@ -42,17 +42,18 @@ namespace Township
             Jotunn.Logger.LogWarning($"Hello World, from the Township plugin");
 
 
-            ItemManager.OnVanillaItemsAvailable += addHeart;
+            ItemManager.OnVanillaItemsAvailable += addExpander;
         }
 
-        private void addHeart()
+
+        private void addExpander()
         {
             LocalizationManager.Instance.AddLocalization(new LocalizationConfig("English")
             {
                 Translations =
                 {
-                        { "piece_HeartSettlement", "Heart of the Settlement" },
-                        { "piece_HeartSettlement_desc", "Currently doesn't do anything" }
+                        { "piece_ExpanderSettlement", "Expander of the Settlement" },
+                        { "piece_ExpanderSettlement_desc", "Gotta tell somethin descritive here at some point" }
 
                  }
             });
@@ -61,18 +62,29 @@ namespace Township
             // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
             CustomPiece CP = new CustomPiece("piece_heartSettlement", "guard_stone", "Hammer");
 
-            CP.Piece.m_name = "$piece_HeartSettlement";
-            CP.Piece.m_description = "$piece_HeartSettlement_desc";
+            CP.Piece.m_name = "$piece_ExpanderSettlement";
+            CP.Piece.m_description = "$piece_ExpanderSettlement_desc";
+
 
             // Downside of duplicating the ward is that I got to rip out the PrivateArea script and put in the SMAI script.
             // Seems to work without downside. While a rather expensive action, I only have to do it once (per unique piece).
             Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
             CP.PiecePrefab.AddComponent<SMAI>();
 
+
             PieceManager.Instance.AddPiece(CP);
 
-            ItemManager.OnVanillaItemsAvailable -= addHeart;
 
+            ItemManager.OnVanillaItemsAvailable -= addExpander;
         }
+
+
+        // int unique_settlement_ID = 0;
+        // claim unique_settlement_ID();
+        // ZDO.mod(unique_settlement_ID += 1)
+        // return unique_settlement_ID;
+
+
+
     }
 }

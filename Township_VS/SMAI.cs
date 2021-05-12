@@ -17,20 +17,17 @@ using Logger = Jotunn.Logger;
 
 namespace Township
 {
-    class SMAI : MonoBehaviour, Hoverable, Interactable
+    class SMAI : MonoBehaviour
     {
 
-        public string m_name = "Heart";
-
         public string settlementName;
-
-        public bool isActive = false;
 
         private Piece m_piece;
         private bool isPlaced = false;
 
         private ZNetView m_nview;
 
+        // public List<Expanders> expandersList; // list of expander totems connected to this SMAI
 
         private void Awake()
         {
@@ -60,15 +57,11 @@ namespace Township
 
                 // Rather ugly code, gotta do something about it later
                 // fetch var, if var not there use default, then set fetched var or default.
-                m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness", 95));
+                m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness", 100));
 
 
                 settlementName = m_nview.GetZDO().GetString("settlementName", "Elktown");
                 m_nview.GetZDO().Set("settlementName", settlementName);
-
-
-                isActive = m_nview.GetZDO().GetBool("isActive", false);
-                m_nview.GetZDO().Set("isActive", isActive);
 
 
             }
@@ -80,62 +73,50 @@ namespace Township
             Jotunn.Logger.LogInfo("thinking...");
         }
 
-
-        public string GetHoverName()
-        {
-            // showing the name of the object
-            return "Heart of " + settlementName;
-        }
-
-        public string GetHoverText()
-        {
-            // for the ward it's things like is_active and stuff.
-            return GetHoverName() +
-                "\nActive: " + isActive.ToString() +
-                "\nHappiness: " + m_nview.GetZDO().GetInt("Happiness").ToString();
-        }
-
-        public bool Interact(Humanoid user, bool hold)
-        {
-
-            if ( !hold )
-            {
-                if( isActive == true)
-                {
-                    makeActive(false);
-                } else
-                {
-                    makeActive(true);
-                }
-
-            }
-            else if( hold )
-            {
-                // blank
-            }
-
-            return false;
-        }
-
-        public void makeActive(bool toactive)
-        {
-            if ( toactive && !isActive) // if true and false
-            {
-                m_nview.GetZDO().Set("isActive", true);
-                isActive = true;
-                InvokeRepeating("think", 5f, 10f);
-            } else if (!toactive && isActive) // if false and true
-            {
-                m_nview.GetZDO().Set("isActive", false);
-                isActive = false;
-                CancelInvoke("think");
-            }
-        }
-
         public bool UseItem(Humanoid user, ItemDrop.ItemData item)
         {
             return false;
         }
+
+
+
+        /*
+        public void registerExpanderTotem()
+        {
+            // add totem to the list of totems
+        }
+        */
+
+        /*
+        public void unregisterExpanderTotem()
+        {
+            // remove totem from list
+            // if last totem, destroy SMAI (and tell Township the world has a settlement less)
+        }
+        */
+
+
+
+        /*
+         * //is it even possible to keep a list of objects that extend from Definer?
+         * 
+        public void registerWorkshopDefinerTotem()
+        public void registerWarehouseDefinerTotem()
+        public void registerHouseDefinerTotem()
+        public void registerDockDefinerTotem()
+        public void registerIndustrialDefinerTotem()
+        public void registerInnDefinerTotem()
+        public void registerFarmlandDefinerTotem()
+        public void registerWallDefinerTotem()
+        public void registerGateDefinerTotem()
+        public void registerRoadDefinerTotem()
+        public void registerMineDefinerTotem()
+        public void registerDefinerTotem()
+
+        {
+            // add totem to the list of totems
+        }
+        */
 
     }
 }

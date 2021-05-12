@@ -20,103 +20,109 @@ using Logger = Jotunn.Logger;
 
 namespace Township
 {
-
     // This class is for use on the Expander totems.
     // Their main purpose is to expand the SMAI's sphere of unfluence.
     // Most functions are about passing questions on to the SMAI.
 
-    class Expander : MonoBehaviour, Hoverable, Interactable
+    class Expander : MonoBehaviour//, Hoverable, Interactable
     {
+
+        public string m_name = "Heart";
+
+        public string settlementName;
 
         public bool isActive = false;
 
         private Piece m_piece;
-        private bool isPlaced = false;
+
+        private bool isPlaced = false; // if the Piece is currently placed in the world
+
+        public SMAI childofSMAI; // the SMAI that is connected to this expander
+        
 
         private ZNetView m_nview;
 
-        public string m_name = "Expander";
+        private void Awake()
+        {
+            m_nview = GetComponent<ZNetView>();
+            m_piece = GetComponent<Piece>();
+        }
 
         private void Start()
         {
-            // A tricky system to deal with the fact that I have to save/network variables,
-            //  but also deal with active development and updates
-            // Either I keep overwriting values, throw errors in the log or just make useless actions
-            // the isPlaced is a hack because the game doesn't track this itself appearantly.
-            // Gotta poke Jotunn to use something similar and also a "isPlaced" call like Start but for when a Piece is placed and not a ghost anymore.
 
             if (m_piece.IsPlacedByPlayer())
             {
-                isPlaced = true;
+                
+                // if ZDO.getbool wasPlaced == true
+                // Skip over specific initializer stuff
+                // else
+                // ZDO.set wasPlaced == true;
+                // do specific initializer stuffs
 
-                m_nview = GetComponent<ZNetView>();
-                m_piece = GetComponent<Piece>();
-                m_nview.m_persistent = true;
 
-                // Rather ugly code, gotta do something about it later
-                // fetch var, if var not there, return default, then set fetched var or default.
-                //m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness", 95));
+                Jotunn.Logger.LogDebug("Doing stuff to expander that was placed by a player");
 
-                //settlementName = m_nview.GetZDO().GetString("settlementName", "no name");
-                //m_nview.GetZDO().Set("settlementName", settlementName);
+
+                m_nview.SetPersistent(true);
+
+
+                m_nview.GetZDO().Set("isActive", m_nview.GetZDO().GetBool("isActive", false));
+
             }
         }
 
-        public void think()
-        {
-            Jotunn.Logger.LogError("Expanders don't think, they're just messagers.");
-        }
+
+        // When placed, an Expander totem is inert and doesn't do anything
+        // When activated/interacted with, the totem will check if there's any other totems in it's range
+        //  if it finds one that's active, ask what it's SMAI is and link to that.
+        //  if it doesn't find one, create it's own SMAI and become a new settlement.
+
+
+
+
+
+
+
+
+
 
         public string GetHoverName()
         {
             // showing the name of the object
-            return "Expander of " + "PLACEHOLDER";//settlementName;
+            return "Expander of " + childofSMAI.m_name;
         }
 
         public string GetHoverText()
         {
             // for the ward it's things like is_active and stuff.
             return GetHoverName() +
-                "\nActive: " + isActive.ToString() +
-                "\nHappiness:" + m_nview.GetZDO().GetInt("Happiness").ToString();
+                "\nActive: " + m_nview.GetZDO().GetBool("isActive");
         }
 
         public bool Interact(Humanoid user, bool hold)
         {
-            // Show SMAI gui on press
-            // Let remane on hold?
-
-            //test if user == owner of piece
 
             if (!hold)
             {
-
-                if (isActive)
+                if (m_nview.GetZDO().GetBool("isActive") == true)
                 {
-                    isActive = false;
+                    m_nview.GetZDO().Set("isActive", false);
                 }
                 else
                 {
-                    isActive = true;
+                    m_nview.GetZDO().Set("isActive", true);
                 }
 
             }
             else if (hold)
             {
+                // blank
             }
 
             return false;
         }
 
-        public void RCP_renameSettlement()
-        {
-            //tldr test if 
-        }
-
-        public bool UseItem(Humanoid user, ItemDrop.ItemData item)
-        {
-            return false;
-        }
 
     }
 }

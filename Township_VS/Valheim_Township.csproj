@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Definer.cs" />
+    <Compile Include="Definer_Sub.cs" />
     <Compile Include="Expander.cs" />
     <Compile Include="SMAI.cs" />
     <Compile Include="Properties\IgnoreAccessModifiers.cs" />
