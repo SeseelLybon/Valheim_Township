@@ -27,13 +27,13 @@ namespace Township
         public string settlementName;
 
         private Piece m_piece;
-        private bool isPlaced = false;
-        private bool isActive;
+        public bool isPlaced = false;
+        public bool isActive;
 
         private ZNetView m_nview;
         private TownshipManager m_tsManager;
 
-        private List<Expander> expanderList; // list of expander totems connected to this SMAI
+        private List<Expander> expanderList = new List<Expander>(); // list of expander totems connected to this SMAI
 
         private void Awake()
         {
@@ -74,7 +74,6 @@ namespace Township
                 isActive = m_nview.GetZDO().GetBool("isActive", false);
                 m_nview.GetZDO().Set("isActive", isActive);
 
-                m_tsManager.registerSMAI(this); // I'm so terrified of this ;_;
             }
         }
 
@@ -87,7 +86,7 @@ namespace Township
         {
             m_nview.GetZDO().Set("TestNumber", m_nview.GetZDO().GetInt("TestNumber") +1);
             Jotunn.Logger.LogDebug(settlementName + " is thinking of...");
-            Jotunn.Logger.LogDebug("Sheeps");
+            //Jotunn.Logger.LogDebug("Elk");
         }
 
 
@@ -96,17 +95,26 @@ namespace Township
          */
         public bool Interact(Humanoid user, bool hold)
         {
+            if( !user.IsOwner() )
+            {
+                return true;
+            }
+            if (hold)
+            {
+                return false;
+            }
             if (!hold)
             {
                 if (isActive == true)
                 {
                     makeActive(false);
+                    return true;
                 }
                 else
                 {
                     makeActive(true);
+                    return true;
                 }
-
             }
 
             // if !hold if active call gui, else throw soft warning
@@ -142,17 +150,27 @@ namespace Township
 
         public void makeActive(bool toactive)
         {
-            if (toactive && !isActive) // if true and false
+            if (toactive && !isActive) // if true and false, activate
             {
-                m_nview.GetZDO().Set("isActive", true);
-                isActive = true;
-                InvokeRepeating("think", 0f, 3f);
+                SMAI SMAIalksf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
+                if (SMAIalksf == null ||  !SMAIalksf.isActive) // null means it isn't in a settlement
+                {
+                    m_nview.GetZDO().Set("isActive", true);
+                    isActive = true;
+                    InvokeRepeating("think", 0f, 10f);
+                    m_tsManager.registerSMAI(this);
+                }
+                else
+                {
+                    Jotunn.Logger.LogMessage("Heart of " + settlementName + "is too close to another Heart");
+                }
             }
-            else if (!toactive && isActive) // if false and true
+            else if (!toactive && isActive) // if false and true, deactivate
             {
                 m_nview.GetZDO().Set("isActive", false);
                 isActive = false;
                 CancelInvoke("think");
+                m_tsManager.unregisterSMAI(this);
             }
         }
 
@@ -182,9 +200,29 @@ namespace Township
             checkConnectionsDistancesfromHeart();
         }
 
-        public void onDestroy()
+        public void OnDestroy()
         {
-            m_tsManager.unregisterSMAI(this);
+            if( m_piece.IsPlacedByPlayer() )
+            {
+                m_tsManager.unregisterSMAI(this);
+            }
+        }
+
+
+        public bool isPosInThisSettlement( Vector3 pos )
+        {
+            if( Vector3.Distance( m_piece.GetCenter(), pos ) <= 30 )
+            {
+                return true;
+            }
+            foreach( Expander totem in expanderList )
+            {
+                if ( Vector3.Distance(totem.m_piece.GetCenter(), pos) <= 30 )
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /*  checkConnectionsDistancesfromHeart()

@@ -33,11 +33,11 @@ namespace Township
         public const string PluginGUID = "com.jotunn.Township";
         public const string PluginName = "Township";
 
-        // Fun      - F is for ffs, U is of uhgg, N is for NullReferenceException...
+        // Fun      - F is for FFS, U is of Uggh, N is for NullReferenceException...
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.0.17";
+        public const string PluginVersion = "0.1.0.21";
 
         // Singleton stuff - boy I hope my teachers don't see this
         private TownshipManager() { }
@@ -46,28 +46,8 @@ namespace Township
         private static TownshipManager instance = new TownshipManager();
         public static TownshipManager Instance {  get { return instance; } }
 
-        /*
-        public static TownshipManager Instance
-        {
-            get
-            {
-                lock (managerLock) {
-                        if (instance == null)
-                        {
-                            Jotunn.Logger.LogWarning("Found no Township manager, making a new instance");
-                            instance = new TownshipManager();
-                        }
-                    Jotunn.Logger.LogDebug("Returning TownshipManager instance");
-                    return instance;
-                }
-            }
-        }
-        */
-
 
         public List<SMAI> SMAIList = new List<SMAI>(); // list of SMAI that were created
-
-        // public Dictionary<name, SMAI> settlements;
 
         private void Awake()
         {
@@ -156,6 +136,20 @@ namespace Township
             Jotunn.Logger.LogInfo("Unregistering new SMAI " + oldSMAI.settlementName);
             // ping all totems of this SMAI that thair parentSMAI is long longer there :'(
             SMAIList.Remove(oldSMAI);
+        }
+
+        public SMAI PosInWhichSettlement(Vector3 pos)
+        {
+            foreach(SMAI settlement in SMAIList)
+            {
+                if( settlement.isPosInThisSettlement(pos) && settlement.isActive )
+                {
+                    return settlement;
+                }
+            }
+
+
+            return null; // this is valid, means Pos isn't in a settlement
         }
     }
 }

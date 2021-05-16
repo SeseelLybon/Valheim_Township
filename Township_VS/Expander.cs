@@ -33,7 +33,7 @@ namespace Township
 
         public bool isActive = false;
 
-        private Piece m_piece;
+        public Piece m_piece;
 
         private bool isPlaced = false; // if the Piece was placed before Awake/Start placed in the world (aka loaded from save data rather than placed by the player
 
