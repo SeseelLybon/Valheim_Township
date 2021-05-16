@@ -17,22 +17,29 @@ using Logger = Jotunn.Logger;
 
 namespace Township
 {
-    class SMAI : MonoBehaviour
+
+    // Funfact; the SMAI and the Heart are intrisicly connected because I'm lazy. So in the code they're generally one and the same.
+    // The SMAI referencing to the manager and Heart referencing to the piece
+
+    class SMAI : MonoBehaviour, Hoverable, Interactable
     {
 
         public string settlementName;
 
         private Piece m_piece;
         private bool isPlaced = false;
+        private bool isActive;
 
         private ZNetView m_nview;
+        private TownshipManager m_tsManager;
 
-        // public List<Expanders> expandersList; // list of expander totems connected to this SMAI
+        private List<Expander> expanderList; // list of expander totems connected to this SMAI
 
         private void Awake()
         {
             m_nview = GetComponent<ZNetView>();
             m_piece = GetComponent<Piece>();
+            m_tsManager = TownshipManager.Instance;
         }
 
         private void Start()
@@ -43,13 +50,11 @@ namespace Township
             // the isPlaced is a hack because the game doesn't track this itself appearantly.
             // Gotta poke Jotunn to use something similar and also a "isPlaced" call like Start but for when a Piece is placed and not a ghost anymore.
 
+
             if ( m_piece.IsPlacedByPlayer() )
             {
                 isPlaced = true;
-            }
 
-            if (isPlaced)
-            {
                 Jotunn.Logger.LogDebug("Doing stuff to object that was placed by a player");
 
                 m_nview.SetPersistent(true);
@@ -57,43 +62,149 @@ namespace Township
 
                 // Rather ugly code, gotta do something about it later
                 // fetch var, if var not there use default, then set fetched var or default.
+                m_nview.GetZDO().Set("TestNumber", m_nview.GetZDO().GetInt("TestNumber", 0));
                 m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness", 100));
+                m_nview.GetZDO().Set("Villagers", m_nview.GetZDO().GetInt("Villagers", 0));
 
+                m_nview.GetZDO().Set("settlementName", m_nview.GetZDO().GetString("settlementName", "Elktown"));
+                settlementName = m_nview.GetZDO().GetString("settlementName");
 
-                settlementName = m_nview.GetZDO().GetString("settlementName", "Elktown");
-                m_nview.GetZDO().Set("settlementName", settlementName);
+                // Got to do this twice because of how makeActive is a toggle.
+                makeActive(m_nview.GetZDO().GetBool("isActive", false) );
+                isActive = m_nview.GetZDO().GetBool("isActive", false);
+                m_nview.GetZDO().Set("isActive", isActive);
 
-
+                m_tsManager.registerSMAI(this); // I'm so terrified of this ;_;
             }
         }
 
+
+
+
+        /*
+         */
         public void think()
         {
-            m_nview.GetZDO().Set("Happiness", m_nview.GetZDO().GetInt("Happiness") -1);
-            Jotunn.Logger.LogInfo("thinking...");
+            m_nview.GetZDO().Set("TestNumber", m_nview.GetZDO().GetInt("TestNumber") +1);
+            Jotunn.Logger.LogDebug(settlementName + " is thinking of...");
+            Jotunn.Logger.LogDebug("Sheeps");
+        }
+
+
+        /* Function is now only for making active or not.
+         *  Will later be used to call the GUI
+         */
+        public bool Interact(Humanoid user, bool hold)
+        {
+            if (!hold)
+            {
+                if (isActive == true)
+                {
+                    makeActive(false);
+                }
+                else
+                {
+                    makeActive(true);
+                }
+
+            }
+
+            // if !hold if active call gui, else throw soft warning
+            // if hold toggle active
+
+            return false;
         }
 
         public bool UseItem(Humanoid user, ItemDrop.ItemData item)
         {
             return false;
+            // invoke the move thingy here with... an item... somehow?
         }
 
+        public string GetHoverName()
+        {
+            // showing the name of the object
+            return "Heart of " + settlementName;
+        }
 
+        public string GetHoverText()
+        {
+            // for the ward it's things like is_active and stuff.
+            return GetHoverName() +
+                "\n Active: " + m_nview.GetZDO().GetBool("isActive").ToString() +
+                "\n TestNumber: " + m_nview.GetZDO().GetInt("TestNumber").ToString();
+
+            //"\nVillagers: " + m_nview.GetZDO().GetInt("Happiness").ToString() +
+            //"\nExpander Totems: " + m_nview.GetZDO().GetInt("Happiness").ToString();
+            // list of Difiner types
+            //"\nDefiners: " + m_nview.GetZDO().GetInt("Happiness").ToString();
+        }
+
+        public void makeActive(bool toactive)
+        {
+            if (toactive && !isActive) // if true and false
+            {
+                m_nview.GetZDO().Set("isActive", true);
+                isActive = true;
+                InvokeRepeating("think", 0f, 3f);
+            }
+            else if (!toactive && isActive) // if false and true
+            {
+                m_nview.GetZDO().Set("isActive", false);
+                isActive = false;
+                CancelInvoke("think");
+            }
+        }
 
         /*
-        public void registerExpanderTotem()
+         */
+        public void registerExpanderTotem( Expander totem_to_be_added )
         {
-            // add totem to the list of totems
+            Jotunn.Logger.LogInfo("Registering a new totem to SMAI of " + settlementName);
+
+            // add totem to list
+            expanderList.Add(totem_to_be_added);
+
+            // Tell other totems a new totem was registered and recheck their connections to the Heart.
+            checkConnectionsDistancesfromHeart();
         }
-        */
 
         /*
-        public void unregisterExpanderTotem()
+         */
+        public void unregisterExpanderTotem( Expander totem_to_be_removed )
         {
-            // remove totem from list
-            // if last totem, destroy SMAI (and tell Township the world has a settlement less)
+            Jotunn.Logger.LogInfo("Unregistering a totem from the SMAI of " + settlementName);
+
+            // Can I assume the totem has been deactivated on it's side?
+            expanderList.Remove(totem_to_be_removed);
+            
+            // Tell other totems one of their own got unregistered and recheck their connections to the Heart.
+            checkConnectionsDistancesfromHeart();
         }
-        */
+
+        public void onDestroy()
+        {
+            m_tsManager.unregisterSMAI(this);
+        }
+
+        /*  checkConnectionsDistancesfromHeart()
+         * This has to be called on register/unregister (activation/deactivation/destruction) but shouldn't need to be called more than that.
+         *  It also should be rather cheap to call, unless someone makes a stupidly huge settlement at which point this pathfinding algoritm
+         *  won't be their main concern.
+         */
+        public void checkConnectionsDistancesfromHeart()
+        {
+            // run some pathfinding algoritm to test what totems are considered to be still connected.
+            //  probably something recursive. Dijkstra?
+            //      Find all totems that're touching this and enter the first one, giving it a distance of 1
+            //          if it can't find any, return
+            //          Find all totems touching this one, ask what the closest one is and if this one's distence is shorter, pass it on.
+            //              GO DEEPER
+            //              if it can't find any, return
+
+            // Go through the expanderList again and throw out (and unregister) any Expanders that haven't been assigned a distance.
+            Jotunn.Logger.LogMessage("SMAI.checkConnectionsDistancesfromHeart() hasn't been filled out yet");
+        }
 
 
 

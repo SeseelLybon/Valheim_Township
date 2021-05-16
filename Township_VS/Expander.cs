@@ -27,7 +27,7 @@ namespace Township
     class Expander : MonoBehaviour//, Hoverable, Interactable
     {
 
-        public string m_name = "Heart";
+        public string m_name = "Expander";
 
         public string settlementName;
 
@@ -35,12 +35,22 @@ namespace Township
 
         private Piece m_piece;
 
-        private bool isPlaced = false; // if the Piece is currently placed in the world
+        private bool isPlaced = false; // if the Piece was placed before Awake/Start placed in the world (aka loaded from save data rather than placed by the player
 
-        public SMAI childofSMAI; // the SMAI that is connected to this expander
+        public SMAI parentSMAI; // the SMAI that is connected to this expander
+        public bool isOwned; // whether the 
         
 
         private ZNetView m_nview;
+
+
+        // -2 = not connected to a Heart
+        // -1 = may be connected to a Heart, but no distance found yet
+        //  0 = not supposed to happen?
+        // greater than 0 ; distance to the Heart
+        public int distanceToHeart = -2; // in lines, a direct connection is 1
+
+
 
         private void Awake()
         {
@@ -68,29 +78,99 @@ namespace Township
 
 
                 m_nview.GetZDO().Set("isActive", m_nview.GetZDO().GetBool("isActive", false));
+                
+
+                /*
+                 * // if this object was loaded from save, and it was active
+                // i
+                 */
 
             }
         }
 
 
-        // When placed, an Expander totem is inert and doesn't do anything
-        // When activated/interacted with, the totem will check if there's any other totems in it's range
-        //  if it finds one that's active, ask what it's SMAI is and link to that.
-        //  if it doesn't find one, create it's own SMAI and become a new settlement.
+        /*
+         * find the nearest SMAI and if it is close enough use that as parentSMAI
+        public SMAI getNearbySMAI () {
+            // ask totems if they're close enough
+            // if totem is nearby, ask for it's parentSMAI
+        }
+        */
 
 
+        public void couldntfindHeart()
+        {
+            makeActive(false);
+            Jotunn.Logger.LogError("Couldn't find a Heart totem near this Expander totem.");
+            parentSMAI = null;
+            distanceToHeart = -2;
+        }
+
+        /* Function is now only for making active or not.
+          *  Will later be used to call the GUI
+          */
+        public bool Interact(Humanoid user, bool hold)
+        {
+            if (!hold)
+            {
+                if (isActive == true)
+                {
+                    makeActive(false);
+                }
+                else
+                {
+                    makeActive(true);
+                }
+
+            }
+
+            // if !hold if active call gui, else throw soft warning
+            // if hold toggle active
+
+            return false;
+        }
+
+        public void makeActive(bool toactive)
+        {
+            if (toactive && !isActive) // if true and false
+            {
+                m_nview.GetZDO().Set("isActive", true);
+                isActive = true;
+                InvokeRepeating("think", 0f, 10f);
+            }
+            else if (!toactive && isActive) // if false and true
+            {
+                m_nview.GetZDO().Set("isActive", false);
+                isActive = false;
+                CancelInvoke("think");
+            }
+        }
+
+        /*
+        private void OnDestroy()
+        {
+            // if this Piece is destroyed, remove from the SMAI's totem list
+            parentSMAI.unregisterExpanderTotem( this );
+        }
+        */
 
 
-
-
-
-
+        /*
+         * function to allow a heart to be moved after being placed without destroying it.
+         * Have the player place an expander totem, some kind of interaction and then swap the two's location.
+        private void moveHeart(SMAI hearttomove, Expander expandertomoveto )
+        {
+            temp Vector3 hearttomove.m_piece.getPosition();
+            hearttomove.m_piece.setPosition(expandertomoveto.m_piece.getPosition() ); 
+            expandertomoveto.m_piece.setPosition(temp.m_piece.getPosition() );
+        }
+        */
 
 
         public string GetHoverName()
         {
             // showing the name of the object
-            return "Expander of " + childofSMAI.m_name;
+            return "Expander of " + parentSMAI.settlementName;
         }
 
         public string GetHoverText()
@@ -98,29 +178,6 @@ namespace Township
             // for the ward it's things like is_active and stuff.
             return GetHoverName() +
                 "\nActive: " + m_nview.GetZDO().GetBool("isActive");
-        }
-
-        public bool Interact(Humanoid user, bool hold)
-        {
-
-            if (!hold)
-            {
-                if (m_nview.GetZDO().GetBool("isActive") == true)
-                {
-                    m_nview.GetZDO().Set("isActive", false);
-                }
-                else
-                {
-                    m_nview.GetZDO().Set("isActive", true);
-                }
-
-            }
-            else if (hold)
-            {
-                // blank
-            }
-
-            return false;
         }
 
 

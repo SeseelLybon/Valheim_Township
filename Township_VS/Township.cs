@@ -3,6 +3,12 @@
 // 
 // File:    JotunnModStub.cs
 // Project: JotunnModStub
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
 
 using BepInEx;
 using BepInEx.Configuration;
@@ -22,13 +28,46 @@ namespace Township
     [BepInDependency(Jotunn.Main.ModGuid)]
     [NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Major)]
 
-    internal class Main : BaseUnityPlugin
+    internal sealed class TownshipManager : BaseUnityPlugin
     {
         public const string PluginGUID = "com.jotunn.Township";
         public const string PluginName = "Township";
-        public const string PluginVersion = "0.1.0.8";
 
-        // public list<SMAI> settlementList;
+        // Fun      - F is for ffs, U is of uhgg, N is for NullReferenceException...
+        // Phase    - Liquid, Gas, Solid, Plasma, Goth
+        // Major    - Milestone within a phase
+        // Minor    - Patches or changes or just tweaks.
+        public const string PluginVersion = "0.1.0.17";
+
+        // Singleton stuff - boy I hope my teachers don't see this
+        private TownshipManager() { }
+        static TownshipManager() { }
+        //private static readonly object managerLock = new object(); 
+        private static TownshipManager instance = new TownshipManager();
+        public static TownshipManager Instance {  get { return instance; } }
+
+        /*
+        public static TownshipManager Instance
+        {
+            get
+            {
+                lock (managerLock) {
+                        if (instance == null)
+                        {
+                            Jotunn.Logger.LogWarning("Found no Township manager, making a new instance");
+                            instance = new TownshipManager();
+                        }
+                    Jotunn.Logger.LogDebug("Returning TownshipManager instance");
+                    return instance;
+                }
+            }
+        }
+        */
+
+
+        public List<SMAI> SMAIList = new List<SMAI>(); // list of SMAI that were created
+
+        // public Dictionary<name, SMAI> settlements;
 
         private void Awake()
         {
@@ -42,7 +81,38 @@ namespace Township
             Jotunn.Logger.LogWarning($"Hello World, from the Township plugin");
 
 
-            ItemManager.OnVanillaItemsAvailable += addExpander;
+            ItemManager.OnVanillaItemsAvailable += addHeart;
+            //ItemManager.OnVanillaItemsAvailable += addExpander;
+
+            //ItemManager.OnVanillaItemsAvailable += addDefinerX1;
+            //ItemManager.OnVanillaItemsAvailable += addDefinerX2;
+            //ItemManager.OnVanillaItemsAvailable += addSubdefinerY1;
+        }
+
+
+        private void addHeart()
+        {
+            LocalizationManager.Instance.AddLocalization(new LocalizationConfig("English")
+            {
+                Translations =
+                {
+                        { "piece_HeartSettlement", "Heart of the Settlement" },
+                        { "piece_HeartSettlement_desc", "Gotta tell somethin descritive here at some point" }
+
+                 }
+            });
+            // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
+            CustomPiece CP = new CustomPiece("piece_HeartSettlement", "guard_stone", "Hammer");
+            CP.Piece.m_name = "$piece_HeartSettlement";
+            CP.Piece.m_description = "$piece_HeartSettlement_desc";
+            // Downside of duplicating the ward is that I got to rip out the PrivateArea script and put in the SMAI script.
+            // Seems to work without downside. While a rather expensive action, I only have to do it once (per unique piece).
+            Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
+            CP.PiecePrefab.AddComponent<SMAI>();
+            PieceManager.Instance.AddPiece(CP);
+            ItemManager.OnVanillaItemsAvailable -= addHeart;
+
+            Jotunn.Logger.LogDebug("Added Heart Totem to pieceTable Hammer");
         }
 
 
@@ -57,34 +127,35 @@ namespace Township
 
                  }
             });
-
-
             // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
-            CustomPiece CP = new CustomPiece("piece_heartSettlement", "guard_stone", "Hammer");
-
+            CustomPiece CP = new CustomPiece("piece_ExpanderSettlement", "guard_stone", "Hammer");
             CP.Piece.m_name = "$piece_ExpanderSettlement";
             CP.Piece.m_description = "$piece_ExpanderSettlement_desc";
-
-
-            // Downside of duplicating the ward is that I got to rip out the PrivateArea script and put in the SMAI script.
-            // Seems to work without downside. While a rather expensive action, I only have to do it once (per unique piece).
             Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
-            CP.PiecePrefab.AddComponent<SMAI>();
-
 
             PieceManager.Instance.AddPiece(CP);
-
-
             ItemManager.OnVanillaItemsAvailable -= addExpander;
+            Jotunn.Logger.LogDebug("Added Expander Totem to pieceTable Hammer");
         }
 
+        /*
+         *  This function is called both when a new SMAI is created when a new Heart is placed
+         *      AND when a world is loaded
+         */
+        public void registerSMAI( SMAI newSMAI )
+        {
+            Jotunn.Logger.LogInfo("Registering new SMAI " + newSMAI.settlementName);
+            SMAIList.Add(newSMAI);
+        }
 
-        // int unique_settlement_ID = 0;
-        // claim unique_settlement_ID();
-        // ZDO.mod(unique_settlement_ID += 1)
-        // return unique_settlement_ID;
-
-
-
+        /*
+         *  This function is called when a Heart totem is destroyed
+         */
+        public void unregisterSMAI( SMAI oldSMAI )
+        {
+            Jotunn.Logger.LogInfo("Unregistering new SMAI " + oldSMAI.settlementName);
+            // ping all totems of this SMAI that thair parentSMAI is long longer there :'(
+            SMAIList.Remove(oldSMAI);
+        }
     }
 }
