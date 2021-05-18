@@ -33,18 +33,18 @@ namespace Township
         public const string PluginGUID = "com.jotunn.Township";
         public const string PluginName = "Township";
 
-        // Fun      - F is for FFS, U is of Uggh, N is for NullReferenceException...
+        // Fun      - F is for 'FFS', U is of 'Uhm...', N is for 'NullReferenceException'
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.0.21";
+        public const string PluginVersion = "0.1.0.22";
 
-        // Singleton stuff - boy I hope my teachers don't see this
+        // Singleton stuff - boy, I hope my teachers don't see this
+        // sourced from https://csharpindepth.com/articles/singleton#lock
         private TownshipManager() { }
-        static TownshipManager() { }
         //private static readonly object managerLock = new object(); 
-        private static TownshipManager instance = new TownshipManager();
-        public static TownshipManager Instance {  get { return instance; } }
+        private static Lazy<TownshipManager> instance = new Lazy<TownshipManager>(() => new TownshipManager());
+        public static TownshipManager Instance { get { return instance.Value; } }
 
 
         public List<SMAI> SMAIList = new List<SMAI>(); // list of SMAI that were created
