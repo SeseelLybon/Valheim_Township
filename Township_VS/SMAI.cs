@@ -38,7 +38,7 @@ namespace Township
         private void Awake()
         {
             m_nview = GetComponent<ZNetView>();
-            m_piece = GetComponent<Piece>();
+            m_piece = GetComponent<Piece>();         
             m_tsManager = TownshipManager.Instance;
         }
 
@@ -157,7 +157,12 @@ namespace Township
                 {
                     m_nview.GetZDO().Set("isActive", true);
                     isActive = true;
-                    InvokeRepeating("think", 0f, 10f);
+                    InvokeRepeating("think", 5f, 5f);
+                    foreach(CraftingStation CSC in m_piece.GetComponents<CraftingStation>())
+                    {
+                        CSC.enabled = true;
+                        Jotunn.Logger.LogFatal(CSC.m_name);
+                    }
                     m_tsManager.registerSMAI(this);
                 }
                 else
@@ -170,6 +175,10 @@ namespace Township
                 m_nview.GetZDO().Set("isActive", false);
                 isActive = false;
                 CancelInvoke("think");
+                foreach (CraftingStation CSC in m_piece.GetComponents<CraftingStation>())
+                {
+                    CSC.enabled = false;
+                }
                 m_tsManager.unregisterSMAI(this);
             }
         }
@@ -224,6 +233,8 @@ namespace Township
             }
             return false;
         }
+
+        // public void OnGUI() {}
 
         /*  checkConnectionsDistancesfromHeart()
          * This has to be called on register/unregister (activation/deactivation/destruction) but shouldn't need to be called more than that.

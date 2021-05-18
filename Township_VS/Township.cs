@@ -14,6 +14,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
 
+using HarmonyLib;
 
 using Jotunn.Configs;
 using Jotunn.Entities;
@@ -37,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.0.22";
+        public const string PluginVersion = "0.1.0.23";
 
         // Singleton stuff - boy, I hope my teachers don't see this
         // sourced from https://csharpindepth.com/articles/singleton#lock
@@ -67,6 +68,10 @@ namespace Township
             //ItemManager.OnVanillaItemsAvailable += addDefinerX1;
             //ItemManager.OnVanillaItemsAvailable += addDefinerX2;
             //ItemManager.OnVanillaItemsAvailable += addSubdefinerY1;
+
+
+
+            //HarmonyLib.Harmony.CreateAndPatchAll(typeof(TownshipManager));
         }
 
 
@@ -85,10 +90,37 @@ namespace Township
             CustomPiece CP = new CustomPiece("piece_HeartSettlement", "guard_stone", "Hammer");
             CP.Piece.m_name = "$piece_HeartSettlement";
             CP.Piece.m_description = "$piece_HeartSettlement_desc";
+
             // Downside of duplicating the ward is that I got to rip out the PrivateArea script and put in the SMAI script.
             // Seems to work without downside. While a rather expensive action, I only have to do it once (per unique piece).
             Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
             CP.PiecePrefab.AddComponent<SMAI>();
+
+            // add the craftin station script
+            CP.PiecePrefab.AddComponent<CraftingStation>(); // [0] Workstation
+            CP.PiecePrefab.AddComponent<CraftingStation>(); // [1] Forge
+            CP.PiecePrefab.AddComponent<CraftingStation>(); // [2] Stonemason's table
+            CP.PiecePrefab.AddComponent<CraftingStation>(); // [3] Artisan's Table
+            CraftingStation[] CraftS_S = CP.PiecePrefab.GetComponents<CraftingStation>();
+
+
+            CraftS_S[0].m_name = "$piece_workbench";
+            CraftS_S[0].m_rangeBuild = 20;
+            CraftS_S[0].enabled = false;    // don't want to work as a substitute yet
+
+            CraftS_S[1].m_name = "$forge";
+            CraftS_S[1].m_rangeBuild = 20;
+            CraftS_S[1].enabled = false;    // don't want to work as a substitute yet
+
+            CraftS_S[2].m_name = "$piece_stonecutter";
+            CraftS_S[2].m_rangeBuild = 20;
+            CraftS_S[2].enabled = false;    // don't want to work as a substitute yet
+
+            CraftS_S[3].m_name = "$piece_artisanstation";
+            CraftS_S[3].m_rangeBuild = 20;
+            CraftS_S[3].enabled = false;    // don't want to work as a substitute yet
+
+
             PieceManager.Instance.AddPiece(CP);
             ItemManager.OnVanillaItemsAvailable -= addHeart;
 
@@ -113,10 +145,24 @@ namespace Township
             CP.Piece.m_description = "$piece_ExpanderSettlement_desc";
             Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
 
+            // add the craftin station script
+            CP.PiecePrefab.AddComponent<CraftingStation>(); // [0] Workstation
+            CP.PiecePrefab.AddComponent<CraftingStation>(); // [1] Forge
+            CraftingStation[] CraftS_S = CP.PiecePrefab.GetComponents<CraftingStation>();
+
+
+            CraftS_S[0].m_name = "$piece_workbench";
+            CraftS_S[0].m_rangeBuild = 20;
+
+
+            CP.PieceTable = "piece_workbench";
+
             PieceManager.Instance.AddPiece(CP);
             ItemManager.OnVanillaItemsAvailable -= addExpander;
             Jotunn.Logger.LogDebug("Added Expander Totem to pieceTable Hammer");
         }
+
+        // public void loadLocilizations() {}
 
         /*
          *  This function is called both when a new SMAI is created when a new Heart is placed
@@ -151,5 +197,27 @@ namespace Township
 
             return null; // this is valid, means Pos isn't in a settlement
         }
+
+        /*
+        [HarmonyPatch(typeof(CraftingStation), "HaveBuildStationInRange"]
+        [HarmonyPrefix]
+        static bool alt_HaveBuildStationInRange(string name, Vector3 point, ref CraftingStation __result)
+        {
+            foreach (CraftingStation allStation in m_allStations)
+            {
+                foreach( CraftingStation scriptcomponent in CraftingStation)
+                if (!(allStation.m_name != name))
+                {
+                    float rangeBuild = allStation.m_rangeBuild;
+                    if (Vector3.Distance(allStation.transform.position, point) < rangeBuild)
+                    {
+                        return allStation;
+                    }
+                }
+            }
+            return null;
+        }
+        */
     }
 }
+
