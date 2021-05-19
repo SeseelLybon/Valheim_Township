@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.4.0";
+        public const string PluginVersion = "0.1.4.20";
         // Phase    - getting basic totems working
         // Major    - getting expanders working
         
@@ -56,18 +56,11 @@ namespace Township
         private void Awake()
         {
 
-
-            // Do all your init stuff here
-            // Acceptable value ranges can be defined to allow configuration via a slider in the BepInEx ConfigurationManager: https://github.com/BepInEx/BepInEx.ConfigurationManager
-            //Config.Bind<int>("Main Section", "Example configuration integer", 1, new ConfigDescription("This is an example config, using a range limitation for ConfigurationManager", new AcceptableValueRange<int>(0, 100)));
-
             // Jotunn comes with its own Logger class to provide a consistent Log style for all mods using it
             Jotunn.Logger.LogWarning($"Hello World, from the Township plugin");
 
 
             ItemManager.OnVanillaItemsAvailable += addHeart;
-            //ItemManager.OnVanillaItemsAvailable += addExpander;
-            ItemManager.OnVanillaItemsAvailable += addExtender;
 
             //ItemManager.OnVanillaItemsAvailable += addDefinerX1;
             //ItemManager.OnVanillaItemsAvailable += addDefinerX2;
@@ -81,101 +74,114 @@ namespace Township
 
         private void addHeart()
         {
-            // duplicating because I'm too lazy to deal with assets right now.
-            CustomPiece CP = new CustomPiece("piece_HeartSettlement", "stone_wall_1x1", "Hammer");
-            CP.Piece.m_name = "$piece_HeartSettlement";
-            CP.Piece.m_description = "$piece_HeartSettlement_desc";
 
-            // Downside of duplicating the ward is that I got to rip out the PrivateArea script and put in the SMAI script.
-            // Seems to work without downside. While a rather expensive action, I only have to do it once (per unique piece).
-            //Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
+            ///////////////////////////////// Heart /////////////////////////////////
+
+            // duplicating because I'm too lazy to deal with assets right now.
+            //CustomPiece CP = new CustomPiece("piece_HeartSettlement", "stone_pillar", "Hammer");
+            CustomPiece CP = new CustomPiece("piece_TS_Heart", "stone_wall_4x2", "Hammer");
+            CP.Piece.m_name = "$piece_TS_Heart";
+            CP.Piece.m_description = "$piece_TS_Heart_desc";
+
+            CP.Piece.m_craftingStation = PrefabManager.Cache.GetPrefab<CraftingStation>("piece_workbench");
+
+            CP.Piece.m_resources = new Piece.Requirement[]{
+                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Stone"), m_amount = 10 },
+                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 10 }
+            };
+
             CP.PiecePrefab.AddComponent<SMAI>();
 
-            //CP.PiecePrefab.AddComponent<CraftingStation>();
-            //CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_ExpanderSettlement";
-            //CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
+            CP.PiecePrefab.AddComponent<CraftingStation>();
+            CraftingStation TS_CS = CP.PiecePrefab.GetComponent<CraftingStation>();
+            TS_CS.m_name = "$piece_TS_Heart_CS"; ;
+            TS_CS.m_rangeBuild = 45; // 50 or 45 - the range is for the player *not* the piece. Does that matter?
 
             PieceManager.Instance.AddPiece(CP);
             ItemManager.OnVanillaItemsAvailable -= addHeart;
 
             Jotunn.Logger.LogDebug("Added Heart Totem to pieceTable Hammer");
-        }
 
 
-        private void addExpander()
-        {
+            ///////////////////////////////// EXPANDERS /////////////////////////////////
+
+
+
             // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
-            CustomPiece CP = new CustomPiece("piece_ExpanderSettlement", "stone_wall_1x1", "Hammer");
-            CP.Piece.m_name = "$piece_ExpanderSettlement";
-            CP.Piece.m_description = "$piece_ExpanderSettlement_desc";
-            //Destroy(CP.PiecePrefab.GetComponent<PrivateArea>());
+            CP = new CustomPiece("piece_TS_Expander", "stone_pillar", "Hammer");
+            CP.Piece.m_name = "$piece_TS_Expander";
+            CP.Piece.m_description = "$piece_TS_Expander_desc";
+            CP.Piece.m_craftingStation = TS_CS;
+            CP.Piece.m_resources = new Piece.Requirement[]{
+                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Stone"), m_amount = 10 },
+                MockRequirement.Create("Wood", 10)
+            };
+
             CP.PiecePrefab.AddComponent<Expander>();
 
-            //CP.PiecePrefab.AddComponent<CraftingStation>();
-            //CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_ExpanderSettlement";
-            //CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
+            CP.PiecePrefab.AddComponent<CraftingStation>();
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_TS_Heart_CS";
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 45; // 50 or 45 - the range is for the player *not* the piece.
 
             PieceManager.Instance.AddPiece(CP);
-            ItemManager.OnVanillaItemsAvailable -= addExpander;
             Jotunn.Logger.LogDebug("Added Expander Totem to pieceTable Hammer");
-        }
 
 
-        private void addExtender()
-        {
+
+            ///////////////////////////////// EXTENDERS /////////////////////////////////
+
+
             // todo; for the asset; something like the banner and a "banner of the forge" to attach to a Extender/Heart that'd be a pillar object thing
-            CustomPiece CP = new CustomPiece("piece_ExtenderSettlement", "stone_wall_1x1", "Hammer");
-            CP.Piece.m_name = "$piece_ExtenderWorkstation";
-            CP.Piece.m_description = "$piece_ExtenderWorkstation_desc";
+            CP = new CustomPiece("piece_ExtenderWorkbench", "piece_banner01", "Hammer");
+            CP.Piece.m_name = "$piece_ExtenderWorkbench";
+            CP.Piece.m_description = "$piece_ExtenderWorkbench_desc";
+            CP.Piece.m_craftingStation = TS_CS;
+
             CP.PiecePrefab.AddComponent<Extender>();
-            CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Workstation";
+            CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Workbench";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_workbench";
             CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_useDistance = 0;
             //CP.PiecePrefab.GetComponent<CraftingStation>().m_icon = ;
             PieceManager.Instance.AddPiece(CP);
 
             
-            CP = new CustomPiece("$piece_ExtenderForge", "stone_wall_1x1", "Hammer");
+            CP = new CustomPiece("piece_ExtenderForge", "piece_banner02", "Hammer");
             CP.Piece.m_name = "$piece_ExtenderForge";
-            CP.Piece.m_description = "$piece_ExtenderSettlement_desc";
+            CP.Piece.m_description = "$piece_ExtenderForge_desc";
+            CP.Piece.m_craftingStation = TS_CS;
             CP.PiecePrefab.AddComponent<Extender>();
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Forge";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$forge";
             CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_useDistance = 10;
             PieceManager.Instance.AddPiece(CP);
 
 
-            CP = new CustomPiece("piece_ExtenderStonecutter", "stone_wall_1x1", "Hammer");
-            CP.Piece.m_name = "$piece_ExtenderStonecutter";
-            CP.Piece.m_description = "$piece_ExtenderSettlement_desc";
+            CP = new CustomPiece("piece_TS_Extender_Stonecutter", "piece_banner03", "Hammer");
+            CP.Piece.m_name = "$piece_TS_Extender_Stonecutter";
+            CP.Piece.m_description = "$piece_ExtenderStonecutter_desc";
+            CP.Piece.m_craftingStation = TS_CS;
             CP.PiecePrefab.AddComponent<Extender>();
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Stonecutter";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_stonecutter";
             CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_useDistance = 10;
             PieceManager.Instance.AddPiece(CP);
 
 
-            CP = new CustomPiece("piece_ExtenderArtisanstation", "stone_wall_1x1", "Hammer");
-            CP.Piece.m_name = "$piece_ExtenderArtisanstation";
-            CP.Piece.m_description = "$piece_ExtenderSettlement_desc";
+            CP = new CustomPiece("piece_TS_Extender_Artisanstation", "piece_banner04", "Hammer");
+            CP.Piece.m_name = "$piece_TS_Extender_Artisanstation";
+            CP.Piece.m_description = "$piece_TS_Extender_Artisanstation_desc";
+            CP.Piece.m_craftingStation = TS_CS;
             CP.PiecePrefab.AddComponent<Extender>();
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Artisan's Station";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_artisanstation";
             CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_useDistance = 10;
             PieceManager.Instance.AddPiece(CP);
             
 
-
-
-            ItemManager.OnVanillaItemsAvailable -= addExtender;
             Jotunn.Logger.LogDebug("Added Extender Totems to pieceTable Hammer");
         }
 
@@ -187,8 +193,21 @@ namespace Township
                     {
                         { "piece_HeartSettlement", "Heart of the Settlement" },
                         { "piece_HeartSettlement_desc", "Gotta tell somethin descritive here at some point" },
+
                         { "piece_ExpanderSettlement", "Expander of the Settlement" },
-                        { "piece_ExpanderSettlement_desc", "Gotta tell somethin descritive here at some point" }
+                        { "piece_ExpanderSettlement_desc", "Gotta tell somethin descritive here at some point" },
+
+                        { "piece_ExtenderWorkbench", "Banner of the Workbench" },
+                        { "piece_ExtenderWorkbench_desc", "Fulfills the need of a Workbench" },
+
+                        { "piece_ExtenderForge", "Banner of the Forge" },
+                        { "piece_ExtenderForge_desc", "Fulfills the need of a forge" },
+
+                        { "piece_ExtenderStonecutter", "Banner of the Stonemason" },
+                        { "piece_ExtenderStonecutter_desc", "Fulfills the need of a workstation" },
+
+                        { "piece_ExtenderArtisanstation", "Banner of the Artisan" },
+                        { "piece_ExtenderArtisanstation_desc", "Fulfills the need of a workstation" },
                 }
             });
         }
