@@ -40,6 +40,7 @@ namespace Township
             m_nview = GetComponent<ZNetView>();
             m_piece = GetComponent<Piece>();         
             m_tsManager = TownshipManager.Instance;
+            GetComponent<WearNTear>().m_onDestroyed += OnDestroyed;
         }
 
         private void Start()
@@ -70,13 +71,13 @@ namespace Township
                 settlementName = m_nview.GetZDO().GetString("settlementName");
 
                 // Got to do this twice because of how makeActive is a toggle.
-                makeActive(m_nview.GetZDO().GetBool("isActive", false) );
+                makeActive(m_nview.GetZDO().GetBool("isActive", false), checkconnections:true );
                 isActive = m_nview.GetZDO().GetBool("isActive", false);
                 m_nview.GetZDO().Set("isActive", isActive);
 
+                createGUIElements()
             }
         }
-
 
 
 
@@ -85,7 +86,7 @@ namespace Township
         public void think()
         {
             m_nview.GetZDO().Set("TestNumber", m_nview.GetZDO().GetInt("TestNumber") +1);
-            Jotunn.Logger.LogDebug(settlementName + " is thinking of...");
+            Jotunn.Logger.LogDebug(settlementName + " thinks, therefore it is.");
             //Jotunn.Logger.LogDebug("Elk");
         }
 
@@ -107,12 +108,12 @@ namespace Township
             {
                 if (isActive == true)
                 {
-                    makeActive(false);
+                    makeActive(toactive:false, checkconnections:true);
                     return true;
                 }
                 else
                 {
-                    makeActive(true);
+                    makeActive(toactive:true, checkconnections: true);
                     return true;
                 }
             }
@@ -140,25 +141,30 @@ namespace Township
             // for the ward it's things like is_active and stuff.
             return GetHoverName() +
                 "\n Active: " + m_nview.GetZDO().GetBool("isActive").ToString() +
-                "\n TestNumber: " + m_nview.GetZDO().GetInt("TestNumber").ToString();
+                "\n TestNumber: " + m_nview.GetZDO().GetInt("TestNumber").ToString() +
+                "\n Expanders: " + expanderList.Count();
 
             //"\nVillagers: " + m_nview.GetZDO().GetInt("Happiness").ToString() +
-            //"\nExpander Totems: " + m_nview.GetZDO().GetInt("Happiness").ToString();
             // list of Difiner types
             //"\nDefiners: " + m_nview.GetZDO().GetInt("Happiness").ToString();
         }
 
-        public void makeActive(bool toactive)
+        public void makeActive(bool toactive, bool checkconnections)
         {
             if (toactive && !isActive) // if true and false, activate
             {
-                SMAI SMAIalksf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
-                if (SMAIalksf == null ||  !SMAIalksf.isActive) // null means it isn't in a settlement
+                // test if there's another settlement nearby
+                SMAI SMAIasdf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
+                if (SMAIasdf == null ) // null means it isn't in a settlement
                 {
                     m_nview.GetZDO().Set("isActive", true);
                     isActive = true;
                     InvokeRepeating("think", 5f, 5f);
                     m_tsManager.registerSMAI(this);
+                    if (checkconnections)
+                    {
+                        checkConnectionstoHeart();
+                    }
                 }
                 else
                 {
@@ -171,42 +177,22 @@ namespace Township
                 isActive = false;
                 CancelInvoke("think");
                 m_tsManager.unregisterSMAI(this);
+                if (checkconnections)
+                {
+                    checkConnectionstoHeart();
+                }
             }
         }
 
-        /*
-         */
-        public void registerExpanderTotem( Expander totem_to_be_added )
-        {
-            Jotunn.Logger.LogInfo("Registering a new totem to SMAI of " + settlementName);
-
-            // add totem to list
-            expanderList.Add(totem_to_be_added);
-
-            // Tell other totems a new totem was registered and recheck their connections to the Heart.
-            checkConnectionsDistancesfromHeart();
-        }
-
-        /*
-         */
-        public void unregisterExpanderTotem( Expander totem_to_be_removed )
-        {
-            Jotunn.Logger.LogInfo("Unregistering a totem from the SMAI of " + settlementName);
-
-            // Can I assume the totem has been deactivated on it's side?
-            expanderList.Remove(totem_to_be_removed);
-            
-            // Tell other totems one of their own got unregistered and recheck their connections to the Heart.
-            checkConnectionsDistancesfromHeart();
-        }
-
-        public void OnDestroy()
+        
+        public void OnDestroyed()
         {
             if( m_piece.IsPlacedByPlayer() )
             {
                 m_tsManager.unregisterSMAI(this);
             }
         }
+
 
 
         public bool isPosInThisSettlement( Vector3 pos )
@@ -225,32 +211,146 @@ namespace Township
             return false;
         }
 
-        // public void OnGUI() {}
-
         /*  checkConnectionsDistancesfromHeart()
          * This has to be called on register/unregister (activation/deactivation/destruction) but shouldn't need to be called more than that.
          *  It also should be rather cheap to call, unless someone makes a stupidly huge settlement at which point this pathfinding algoritm
          *  won't be their main concern.
          */
-        public void checkConnectionsDistancesfromHeart()
-        {
-            // run some pathfinding algoritm to test what totems are considered to be still connected.
-            //  probably something recursive. Dijkstra?
-            //      Find all totems that're touching this and enter the first one, giving it a distance of 1
-            //          if it can't find any, return
-            //          Find all totems touching this one, ask what the closest one is and if this one's distence is shorter, pass it on.
-            //              GO DEEPER
-            //              if it can't find any, return
 
-            // Go through the expanderList again and throw out (and unregister) any Expanders that haven't been assigned a distance.
-            Jotunn.Logger.LogMessage("SMAI.checkConnectionsDistancesfromHeart() hasn't been filled out yet");
+        private readonly object checkconnection_lock = new object();
+        public void checkConnectionstoHeart()
+        {
+            lock(checkconnection_lock) // this is a major operation and nobody should access this file (or expanderList tbf) at this time.
+            {
+                Jotunn.Logger.LogDebug("checking connections for " + settlementName);
+
+                Jotunn.Logger.LogDebug("Heart center: " + m_piece.GetCenter());
+
+                // list with all the expanders in range that are active
+                List<Expander> new_expanderList = new List<Expander>();
+
+                // list of all expanders in a 2000 something range
+                List<Expander> localexpanderList = new List<Expander>();
+
+                // no point in testing which are conneccted if there is no active heart to connect to
+                if(isActive)
+                {
+
+
+                    // Don't really need to check for Expanders that would be an unreasonable distance way (and not active).
+                    // 10 bucks someone files a bug report about this.
+                    foreach (Expander n_expander in Expander.m_AllExpanders)
+                    {
+                        if (Vector3.Distance(n_expander.m_piece.GetCenter(), m_piece.GetCenter()) <= 2000 && n_expander.isActive)
+                        {
+                            localexpanderList.Add(n_expander);
+                        }
+                    }
+
+                    Jotunn.Logger.LogDebug("Found nearby expanders: " + localexpanderList.Count());
+
+                    foreach (Expander n_expander in localexpanderList)
+                    {
+                        if (Vector3.Distance(n_expander.m_piece.GetCenter(), m_piece.GetCenter()) <= 50 && n_expander.isActive)
+                        {
+                            if (new_expanderList.Contains(n_expander))
+                            {
+                                Jotunn.Logger.LogDebug("Expander was already in list");
+                                continue;
+                            }
+                            else
+                            {
+                                Jotunn.Logger.LogDebug("Adding expander and going deeper");
+                                new_expanderList.Add(n_expander);
+                                checkConnectionstoHeart_R(n_expander, in localexpanderList, ref new_expanderList);
+                            }
+                        }
+                    }
+                }
+
+
+                // deactivate all the Expanders that aren't in the new list
+                foreach(Expander old_expander in expanderList)
+                {
+                    old_expander.changeConnection(toConnect: false, checkconnections: false);
+                }
+
+                foreach (Expander new_expander in new_expanderList)
+                {
+                    new_expander.changeConnection(toConnect: true, checkconnections: false);
+                }
+
+                Jotunn.Logger.LogDebug("Old: " + expanderList.Count() + "| New: " + new_expanderList.Count());
+                
+                expanderList.Clear();
+                expanderList.AddRange( new_expanderList );
+
+                Jotunn.Logger.LogDebug("current: " + expanderList.Count() + "| New: " + new_expanderList.Count());
+
+            }
+        }
+
+        private void checkConnectionstoHeart_R(Expander c_expander, in List<Expander> localexpanderList, ref List<Expander> new_expanderList)
+        {
+            foreach (Expander n_expander in localexpanderList)
+            {
+                if (Vector3.Distance(n_expander.m_piece.GetCenter(), c_expander.m_piece.GetCenter()) <= 50 && n_expander.isActive) // this time test against c_expander *not* heart/m_piece.center
+                {
+                    if (new_expanderList.Contains(n_expander))
+                    {
+                        continue;
+                    } else
+                    {
+                        new_expanderList.Add(n_expander);
+                        checkConnectionstoHeart_R(n_expander, in localexpanderList, ref new_expanderList);
+                    }
+                }
+            }
+        }
+
+
+        ///
+        ////////////////////////////////// GUI ////////////////////////////
+        ///
+
+        private GameObject panel_main;
+        private GameObject panel_secondary;
+        private GameObject button_toMainTab;
+        private GameObject button_toInfoTab;
+
+        private void createGUIElements()
+        {
+            var guim = GUIManager.Instance; // calling this one a lot, so lets cache it
+
+            panel_main = guim.CreateWoodpanel(
+                GUIManager.PixelFix.transform,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0, 0), 850, 600
+                );
+
+            panel_secondary = guim.CreateWoodpanel(
+                panel_main.transform,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0, 0), 850, 600
+                );
+        }
+
+        public bool showGUI;
+        public void OnGUI() {
+            if (showGUI)
+            {
+
+            }
         }
 
 
 
         /*
-         * //is it even possible to keep a list of objects that extend from Definer?
-         * 
+         * is it even possible to keep a list of objects that extend from Definer?
+         * something something slicing from C++?
+         * no need to check connections here, as they don't influence the Expander network
         public void registerWorkshopDefinerTotem()
         public void registerWarehouseDefinerTotem()
         public void registerHouseDefinerTotem()

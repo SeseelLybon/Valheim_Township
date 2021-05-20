@@ -38,9 +38,9 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.4.20";
+        public const string PluginVersion = "0.1.6.16";
         // Phase    - getting basic totems working
-        // Major    - getting expanders working
+        // Major    - getting expander registration working
         
 
         // Singleton stuff - boy, I hope my teachers don't see this
@@ -60,7 +60,7 @@ namespace Township
             Jotunn.Logger.LogWarning($"Hello World, from the Township plugin");
 
 
-            ItemManager.OnVanillaItemsAvailable += addHeart;
+            ItemManager.OnVanillaItemsAvailable += addPieces;
 
             //ItemManager.OnVanillaItemsAvailable += addDefinerX1;
             //ItemManager.OnVanillaItemsAvailable += addDefinerX2;
@@ -72,7 +72,7 @@ namespace Township
         }
 
 
-        private void addHeart()
+        private void addPieces()
         {
 
             ///////////////////////////////// Heart /////////////////////////////////
@@ -95,10 +95,9 @@ namespace Township
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CraftingStation TS_CS = CP.PiecePrefab.GetComponent<CraftingStation>();
             TS_CS.m_name = "$piece_TS_Heart_CS"; ;
-            TS_CS.m_rangeBuild = 45; // 50 or 45 - the range is for the player *not* the piece. Does that matter?
+            TS_CS.m_rangeBuild = 50; // 50 or 45 - the range is for the player *not* the piece. Does that matter?
 
             PieceManager.Instance.AddPiece(CP);
-            ItemManager.OnVanillaItemsAvailable -= addHeart;
 
             Jotunn.Logger.LogDebug("Added Heart Totem to pieceTable Hammer");
 
@@ -114,14 +113,14 @@ namespace Township
             CP.Piece.m_craftingStation = TS_CS;
             CP.Piece.m_resources = new Piece.Requirement[]{
                 new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Stone"), m_amount = 10 },
-                MockRequirement.Create("Wood", 10)
+                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 10 },
             };
 
             CP.PiecePrefab.AddComponent<Expander>();
 
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_TS_Heart_CS";
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 45; // 50 or 45 - the range is for the player *not* the piece.
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50; // 50 or 45 - the range is for the player *not* the piece.
 
             PieceManager.Instance.AddPiece(CP);
             Jotunn.Logger.LogDebug("Added Expander Totem to pieceTable Hammer");
@@ -132,9 +131,9 @@ namespace Township
 
 
             // todo; for the asset; something like the banner and a "banner of the forge" to attach to a Extender/Heart that'd be a pillar object thing
-            CP = new CustomPiece("piece_ExtenderWorkbench", "piece_banner01", "Hammer");
-            CP.Piece.m_name = "$piece_ExtenderWorkbench";
-            CP.Piece.m_description = "$piece_ExtenderWorkbench_desc";
+            CP = new CustomPiece("piece_TS_Extender_Workbench", "piece_banner01", "Hammer");
+            CP.Piece.m_name = "$piece_TS_Extender_Workbench";
+            CP.Piece.m_description = "$piece_TS_Extender_Workbench_desc";
             CP.Piece.m_craftingStation = TS_CS;
 
             CP.PiecePrefab.AddComponent<Extender>();
@@ -146,9 +145,9 @@ namespace Township
             PieceManager.Instance.AddPiece(CP);
 
             
-            CP = new CustomPiece("piece_ExtenderForge", "piece_banner02", "Hammer");
-            CP.Piece.m_name = "$piece_ExtenderForge";
-            CP.Piece.m_description = "$piece_ExtenderForge_desc";
+            CP = new CustomPiece("piece_TS_Extender_Forge", "piece_banner02", "Hammer");
+            CP.Piece.m_name = "$piece_TS_Extender_Forge";
+            CP.Piece.m_description = "$piece_TS_Extender_Forge_desc";
             CP.Piece.m_craftingStation = TS_CS;
             CP.PiecePrefab.AddComponent<Extender>();
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Forge";
@@ -160,7 +159,7 @@ namespace Township
 
             CP = new CustomPiece("piece_TS_Extender_Stonecutter", "piece_banner03", "Hammer");
             CP.Piece.m_name = "$piece_TS_Extender_Stonecutter";
-            CP.Piece.m_description = "$piece_ExtenderStonecutter_desc";
+            CP.Piece.m_description = "$piece_TS_Extender_Stonecutter_desc";
             CP.Piece.m_craftingStation = TS_CS;
             CP.PiecePrefab.AddComponent<Extender>();
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Stonecutter";
@@ -183,6 +182,8 @@ namespace Township
             
 
             Jotunn.Logger.LogDebug("Added Extender Totems to pieceTable Hammer");
+
+            ItemManager.OnVanillaItemsAvailable -= addPieces;
         }
 
 
@@ -191,23 +192,23 @@ namespace Township
             {
                 Translations =
                     {
-                        { "piece_HeartSettlement", "Heart of the Settlement" },
-                        { "piece_HeartSettlement_desc", "Gotta tell somethin descritive here at some point" },
+                        { "piece_TS_Heart", "Heart of the Settlement" },
+                        { "piece_TS_Heart_desc", "Gotta tell somethin descritive here at some point" },
 
-                        { "piece_ExpanderSettlement", "Expander of the Settlement" },
-                        { "piece_ExpanderSettlement_desc", "Gotta tell somethin descritive here at some point" },
+                        { "piece_TS_Expander", "Expander of the Settlement" },
+                        { "piece_TS_Expander_desc", "Gotta tell somethin descritive here at some point" },
 
-                        { "piece_ExtenderWorkbench", "Banner of the Workbench" },
-                        { "piece_ExtenderWorkbench_desc", "Fulfills the need of a Workbench" },
+                        { "piece_TS_Extender_Workbench", "Banner of the Workbench" },
+                        { "piece_TS_Extender_Workbench_desc", "Fulfills the need of a Workbench" },
 
-                        { "piece_ExtenderForge", "Banner of the Forge" },
-                        { "piece_ExtenderForge_desc", "Fulfills the need of a forge" },
+                        { "piece_TS_Extender_Forge", "Banner of the Forge" },
+                        { "piece_TS_Extender_Forge_desc", "Fulfills the need of a forge" },
 
-                        { "piece_ExtenderStonecutter", "Banner of the Stonemason" },
-                        { "piece_ExtenderStonecutter_desc", "Fulfills the need of a workstation" },
+                        { "piece_TS_Extender_Stonecutter", "Banner of the Stonemason" },
+                        { "piece_TS_Extender_Stonecutter_desc", "Fulfills the need of a workstation" },
 
-                        { "piece_ExtenderArtisanstation", "Banner of the Artisan" },
-                        { "piece_ExtenderArtisanstation_desc", "Fulfills the need of a workstation" },
+                        { "piece_TS_Extender_Artisanstation", "Banner of the Artisan" },
+                        { "piece_TS_Extender_Artisanstation_desc", "Fulfills the need of a workstation" },
                 }
             });
         }

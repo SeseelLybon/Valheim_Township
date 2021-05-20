@@ -24,31 +24,29 @@ namespace Township
     // Their main purpose is to expand the SMAI's sphere of unfluence.
     // Most functions are about passing questions on to the SMAI.
 
-    class Expander : MonoBehaviour//, Hoverable, Interactable
+    class Expander : MonoBehaviour, Hoverable, Interactable
     {
 
         public string m_name = "Expander";
 
         public string settlementName;
 
-        public bool isActive = false;
 
         public Piece m_piece;
+        public TownshipManager m_tsManager;
 
         private bool isPlaced = false; // if the Piece was placed before Awake/Start placed in the world (aka loaded from save data rather than placed by the player
 
         public SMAI parentSMAI; // the SMAI that is connected to this expander
+
+        public bool isConnected =  false;   // where the Expander has a connection
+        public bool isActive = false;       // whether the Expander can recieve connections
+
         public bool isOwned; // whether the 
-        
+
+        public static List<Expander> m_AllExpanders = new List<Expander>();
 
         private ZNetView m_nview;
-
-
-        // -2 = not connected to a Heart
-        // -1 = may be connected to a Heart, but no distance found yet
-        //  0 = not supposed to happen?
-        // greater than 0 ; distance to the Heart
-        public int distanceToHeart = -2; // in lines, a direct connection is 1
 
 
 
@@ -56,6 +54,8 @@ namespace Township
         {
             m_nview = GetComponent<ZNetView>();
             m_piece = GetComponent<Piece>();
+            m_tsManager = TownshipManager.Instance;
+            GetComponent<WearNTear>().m_onDestroyed += OnDestroyed;
         }
 
         private void Start()
@@ -76,9 +76,13 @@ namespace Township
 
                 m_nview.SetPersistent(true);
 
+                m_AllExpanders.Add(this);
 
-                m_nview.GetZDO().Set("isActive", m_nview.GetZDO().GetBool("isActive", false));
-                
+                isActive = m_nview.GetZDO().GetBool("isActive", false);
+                m_nview.GetZDO().Set("isActive", isActive);
+
+                changeActive(isActive);
+
 
                 /*
                  * // if this object was loaded from save, and it was active
@@ -88,40 +92,31 @@ namespace Township
             }
         }
 
-
-        /*
-         * find the nearest SMAI and if it is close enough use that as parentSMAI
-        public SMAI getNearbySMAI () {
-            // ask totems if they're close enough
-            // if totem is nearby, ask for it's parentSMAI
-        }
-        */
-
-
-        public void couldntfindHeart()
-        {
-            makeActive(false);
-            Jotunn.Logger.LogError("Couldn't find a Heart totem near this Expander totem.");
-            parentSMAI = null;
-            distanceToHeart = -2;
-        }
-
         /* Function is now only for making active or not.
           *  Will later be used to call the GUI
           */
         public bool Interact(Humanoid user, bool hold)
         {
+            if (!user.IsOwner())
+            {
+                return true;
+            }
+            if (hold)
+            {
+                return false;
+            }
             if (!hold)
             {
                 if (isActive == true)
                 {
-                    makeActive(false);
+                    changeActive(false);
+                    return true;
                 }
                 else
                 {
-                    makeActive(true);
+                    changeActive(true);
+                    return true;
                 }
-
             }
 
             // if !hold if active call gui, else throw soft warning
@@ -130,54 +125,97 @@ namespace Township
             return false;
         }
 
-        public void makeActive(bool toactive)
+        public bool UseItem(Humanoid user, ItemDrop.ItemData item)
         {
+            return false;
+            // invoke the move thingy here with... an item... somehow?
+        }
+
+        public void changeActive(bool toactive)
+        {
+            // change whether the Expander can connect and relay connections
             if (toactive && !isActive) // if true and false
             {
                 m_nview.GetZDO().Set("isActive", true);
                 isActive = true;
-                InvokeRepeating("think", 0f, 10f);
+                changeConnection(toConnect:true, checkconnections:true); // if I can connect, it'd be nice if I was
             }
             else if (!toactive && isActive) // if false and true
             {
                 m_nview.GetZDO().Set("isActive", false);
                 isActive = false;
-                CancelInvoke("think");
+                changeConnection(toConnect:false, checkconnections:true); // relinquesh connection when deactivating
             }
         }
 
-        /*
-        private void OnDestroy()
+        public void changeConnection(bool toConnect, bool checkconnections = true)
         {
-            // if this Piece is destroyed, remove from the SMAI's totem list
-            parentSMAI.unregisterExpanderTotem( this );
+            //Change whether the Expander can connect in this moment
+
+            SMAI SMAIasdf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
+
+            if (isActive && toConnect && SMAIasdf != null && SMAIasdf.isActive)
+            {
+                parentSMAI = SMAIasdf;
+                isConnected = true;
+                GetComponent<CraftingStation>().m_rangeBuild = 50;
+            }
+            else if (!toConnect)
+            {
+                parentSMAI = null;
+                isConnected = false;
+                Jotunn.Logger.LogInfo("Disconnecting Expander");
+            }
+            else if (SMAIasdf == null)
+            {
+                parentSMAI = null;
+                isConnected = false;
+                Jotunn.Logger.LogInfo("No nearby or active Settlement found!");
+            } else
+            {
+                Jotunn.Logger.LogFatal("Expander.changeConnection() had an impossible outcome");
+                Jotunn.Logger.LogFatal("\t " + isActive);
+                Jotunn.Logger.LogFatal("\t " + isConnected);
+                Jotunn.Logger.LogFatal("\t " + toConnect);
+                Jotunn.Logger.LogFatal("\t " + (parentSMAI?"null":parentSMAI.settlementName));
+                Jotunn.Logger.LogFatal("\t " + (SMAIasdf ? "null" : parentSMAI.settlementName));
+            }
+
+            if (checkconnections && SMAIasdf != null )
+            {
+                SMAIasdf.checkConnectionstoHeart();
+            }
+
         }
-        */
 
 
-        /*
-         * function to allow a heart to be moved after being placed without destroying it.
-         * Have the player place an expander totem, some kind of interaction and then swap the two's location.
-        private void moveHeart(SMAI hearttomove, Expander expandertomoveto )
+
+        public void OnDestroyed()
         {
-            temp Vector3 hearttomove.m_piece.getPosition();
-            hearttomove.m_piece.setPosition(expandertomoveto.m_piece.getPosition() ); 
-            expandertomoveto.m_piece.setPosition(temp.m_piece.getPosition() );
+            if(parentSMAI)
+                parentSMAI.checkConnectionstoHeart();
+            m_AllExpanders.Remove(this);
         }
-        */
-
 
         public string GetHoverName()
         {
             // showing the name of the object
-            return "Expander of " + parentSMAI.settlementName;
+            if (parentSMAI != null)
+            {
+                return "Expander of " + parentSMAI.settlementName;
+            } else
+            {
+                return "Expander of None";
+            }
         }
 
         public string GetHoverText()
         {
             // for the ward it's things like is_active and stuff.
             return GetHoverName() +
-                "\nActive: " + m_nview.GetZDO().GetBool("isActive");
+                "\n Active: " + m_nview.GetZDO().GetBool("isActive") +
+                "\n Connected: " + isConnected +
+                "\n Expanders: " + m_AllExpanders.Count();
         }
 
 
