@@ -40,6 +40,7 @@ namespace Township
             m_nview = GetComponent<ZNetView>();
             m_piece = GetComponent<Piece>();         
             m_tsManager = TownshipManager.Instance;
+            //m_sm_guiManager = SM_GUI.Instance;
             GetComponent<WearNTear>().m_onDestroyed += OnDestroyed;
         }
 
@@ -74,8 +75,6 @@ namespace Township
                 makeActive(m_nview.GetZDO().GetBool("isActive", false), checkconnections:true );
                 isActive = m_nview.GetZDO().GetBool("isActive", false);
                 m_nview.GetZDO().Set("isActive", isActive);
-
-                createGUIElements()
             }
         }
 
@@ -102,18 +101,20 @@ namespace Township
             }
             if (hold)
             {
-                return false;
+                return true;
             }
             if (!hold)
             {
                 if (isActive == true)
                 {
                     makeActive(toactive:false, checkconnections:true);
+                    // m_smguiManager.close_gui();
                     return true;
                 }
                 else
                 {
                     makeActive(toactive:true, checkconnections: true);
+                    // m_smguiManager.close_gui();
                     return true;
                 }
             }
@@ -151,7 +152,7 @@ namespace Township
 
         public void makeActive(bool toactive, bool checkconnections)
         {
-            if (toactive && !isActive) // if true and false, activate
+            if (toactive)// && !isActive) // if making active and is not active, activate
             {
                 // test if there's another settlement nearby
                 SMAI SMAIasdf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
@@ -161,6 +162,8 @@ namespace Township
                     isActive = true;
                     InvokeRepeating("think", 5f, 5f);
                     m_tsManager.registerSMAI(this);
+                    GetComponent<CraftingStation>().m_rangeBuild = m_tsManager.CS_buildrange;
+
                     if (checkconnections)
                     {
                         checkConnectionstoHeart();
@@ -171,12 +174,13 @@ namespace Township
                     Jotunn.Logger.LogMessage("Heart of " + settlementName + "is too close to another Heart");
                 }
             }
-            else if (!toactive && isActive) // if false and true, deactivate
+            else if (!toactive)// && isActive) // if making unactive and isactive, deactivate
             {
                 m_nview.GetZDO().Set("isActive", false);
                 isActive = false;
                 CancelInvoke("think");
                 m_tsManager.unregisterSMAI(this);
+                GetComponent<CraftingStation>().m_rangeBuild = 0;
                 if (checkconnections)
                 {
                     checkConnectionstoHeart();
@@ -222,6 +226,8 @@ namespace Township
         {
             lock(checkconnection_lock) // this is a major operation and nobody should access this file (or expanderList tbf) at this time.
             {
+                int canidate_range = 2000;
+
                 Jotunn.Logger.LogDebug("checking connections for " + settlementName);
 
                 Jotunn.Logger.LogDebug("Heart center: " + m_piece.GetCenter());
@@ -241,7 +247,7 @@ namespace Township
                     // 10 bucks someone files a bug report about this.
                     foreach (Expander n_expander in Expander.m_AllExpanders)
                     {
-                        if (Vector3.Distance(n_expander.m_piece.GetCenter(), m_piece.GetCenter()) <= 2000 && n_expander.isActive)
+                        if (Vector3.Distance(n_expander.m_piece.GetCenter(), m_piece.GetCenter()) <= canidate_range && n_expander.isActive)
                         {
                             localexpanderList.Add(n_expander);
                         }
@@ -251,7 +257,7 @@ namespace Township
 
                     foreach (Expander n_expander in localexpanderList)
                     {
-                        if (Vector3.Distance(n_expander.m_piece.GetCenter(), m_piece.GetCenter()) <= 50 && n_expander.isActive)
+                        if (Vector3.Distance(n_expander.m_piece.GetCenter(), m_piece.GetCenter()) <= m_tsManager.connection_range && n_expander.isActive)
                         {
                             if (new_expanderList.Contains(n_expander))
                             {
@@ -275,15 +281,15 @@ namespace Township
                     old_expander.changeConnection(toConnect: false, checkconnections: false);
                 }
 
-                foreach (Expander new_expander in new_expanderList)
-                {
-                    new_expander.changeConnection(toConnect: true, checkconnections: false);
-                }
-
                 Jotunn.Logger.LogDebug("Old: " + expanderList.Count() + "| New: " + new_expanderList.Count());
                 
                 expanderList.Clear();
                 expanderList.AddRange( new_expanderList );
+
+                foreach (Expander new_expander in new_expanderList)
+                {
+                    new_expander.changeConnection(toConnect: true, checkconnections: false);
+                }
 
                 Jotunn.Logger.LogDebug("current: " + expanderList.Count() + "| New: " + new_expanderList.Count());
 
@@ -294,7 +300,7 @@ namespace Township
         {
             foreach (Expander n_expander in localexpanderList)
             {
-                if (Vector3.Distance(n_expander.m_piece.GetCenter(), c_expander.m_piece.GetCenter()) <= 50 && n_expander.isActive) // this time test against c_expander *not* heart/m_piece.center
+                if (Vector3.Distance(n_expander.m_piece.GetCenter(), c_expander.m_piece.GetCenter()) <= m_tsManager.connection_range && n_expander.isActive) // this time test against c_expander *not* heart/m_piece.center
                 {
                     if (new_expanderList.Contains(n_expander))
                     {
@@ -309,41 +315,7 @@ namespace Township
         }
 
 
-        ///
-        ////////////////////////////////// GUI ////////////////////////////
-        ///
 
-        private GameObject panel_main;
-        private GameObject panel_secondary;
-        private GameObject button_toMainTab;
-        private GameObject button_toInfoTab;
-
-        private void createGUIElements()
-        {
-            var guim = GUIManager.Instance; // calling this one a lot, so lets cache it
-
-            panel_main = guim.CreateWoodpanel(
-                GUIManager.PixelFix.transform,
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0, 0), 850, 600
-                );
-
-            panel_secondary = guim.CreateWoodpanel(
-                panel_main.transform,
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0, 0), 850, 600
-                );
-        }
-
-        public bool showGUI;
-        public void OnGUI() {
-            if (showGUI)
-            {
-
-            }
-        }
 
 
 

@@ -31,3 +31,10 @@
 	Settlement Biome
 		Have diffirent kinds of Settlement Biome's spawn around the Heart and Expanders.
 		Outpost, Village, Town, City as the totem is further away removed from nature.
+
+
+
+
+
+### Credits
+(if I keep track of them)

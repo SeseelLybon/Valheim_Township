@@ -134,17 +134,19 @@ namespace Township
         public void changeActive(bool toactive)
         {
             // change whether the Expander can connect and relay connections
-            if (toactive && !isActive) // if true and false
+            if (toactive)// && !isActive) // if true and false
             {
                 m_nview.GetZDO().Set("isActive", true);
                 isActive = true;
                 changeConnection(toConnect:true, checkconnections:true); // if I can connect, it'd be nice if I was
+                GetComponent<CraftingStation>().m_rangeBuild = 10; // doesn't work
             }
-            else if (!toactive && isActive) // if false and true
+            else if (!toactive)// && isActive) // if false and true
             {
                 m_nview.GetZDO().Set("isActive", false);
                 isActive = false;
-                changeConnection(toConnect:false, checkconnections:true); // relinquesh connection when deactivating
+                changeConnection(toConnect:false, checkconnections:true); // relinquesh connection when deactivatin
+                GetComponent<CraftingStation>().m_rangeBuild = 0; // doesn't work
             }
         }
 
@@ -158,7 +160,7 @@ namespace Township
             {
                 parentSMAI = SMAIasdf;
                 isConnected = true;
-                GetComponent<CraftingStation>().m_rangeBuild = 50;
+                Jotunn.Logger.LogInfo("Connecting Expander");
             }
             else if (!toConnect)
             {

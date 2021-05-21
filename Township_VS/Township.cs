@@ -38,9 +38,9 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.6.16";
+        public const string PluginVersion = "0.1.7.0";
         // Phase    - getting basic totems working
-        // Major    - getting expander registration working
+        // Major    - getting a gui for SMAI working
         
 
         // Singleton stuff - boy, I hope my teachers don't see this
@@ -71,6 +71,13 @@ namespace Township
             loadLocilizations();
         }
 
+        public readonly int CS_buildrange = 20;
+        public readonly int Extender_buildrange = 20;
+        public readonly int connection_range = 30; // range at which a SMAI/Expanders can connect
+
+        public readonly int SOI_range = 20; // Sphere of Influence
+
+        public CraftingStation TS_CS;
 
         private void addPieces()
         {
@@ -93,9 +100,9 @@ namespace Township
             CP.PiecePrefab.AddComponent<SMAI>();
 
             CP.PiecePrefab.AddComponent<CraftingStation>();
-            CraftingStation TS_CS = CP.PiecePrefab.GetComponent<CraftingStation>();
-            TS_CS.m_name = "$piece_TS_Heart_CS"; ;
-            TS_CS.m_rangeBuild = 50; // 50 or 45 - the range is for the player *not* the piece. Does that matter?
+            TS_CS = CP.PiecePrefab.GetComponent<CraftingStation>();
+            TS_CS.m_name = "$piece_TS_CS"; ;
+            TS_CS.m_rangeBuild = CS_buildrange; // 50 or 45 - the range is for the player *not* the piece. Does that matter?
 
             PieceManager.Instance.AddPiece(CP);
 
@@ -119,8 +126,9 @@ namespace Township
             CP.PiecePrefab.AddComponent<Expander>();
 
             CP.PiecePrefab.AddComponent<CraftingStation>();
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_TS_Heart_CS";
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50; // 50 or 45 - the range is for the player *not* the piece.
+            CP.PiecePrefab.GetComponent<CraftingStation>();
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_TS_CS";
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = CS_buildrange; // 50 or 45 - the range is for the player *not* the piece.
 
             PieceManager.Instance.AddPiece(CP);
             Jotunn.Logger.LogDebug("Added Expander Totem to pieceTable Hammer");
@@ -140,7 +148,7 @@ namespace Township
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Workbench";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_workbench";
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = Extender_buildrange;
             //CP.PiecePrefab.GetComponent<CraftingStation>().m_icon = ;
             PieceManager.Instance.AddPiece(CP);
 
@@ -153,7 +161,7 @@ namespace Township
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Forge";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$forge";
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = Extender_buildrange;
             PieceManager.Instance.AddPiece(CP);
 
 
@@ -165,7 +173,7 @@ namespace Township
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Stonecutter";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_stonecutter";
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = Extender_buildrange;
             PieceManager.Instance.AddPiece(CP);
 
 
@@ -177,7 +185,7 @@ namespace Township
             CP.PiecePrefab.GetComponent<Extender>().m_extender_type = "Artisan's Station";
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_artisanstation";
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = 50;
+            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = Extender_buildrange;
             PieceManager.Instance.AddPiece(CP);
             
 
@@ -185,7 +193,6 @@ namespace Township
 
             ItemManager.OnVanillaItemsAvailable -= addPieces;
         }
-
 
         public void loadLocilizations() {
             LocalizationManager.Instance.AddLocalization(new LocalizationConfig("English")

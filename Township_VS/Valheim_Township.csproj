@@ -84,6 +84,7 @@
     <Compile Include="SMAI.cs" />
     <Compile Include="Properties\IgnoreAccessModifiers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SM_GUI.cs" />
     <Compile Include="Township.cs" />
   </ItemGroup>
   <ItemGroup>
