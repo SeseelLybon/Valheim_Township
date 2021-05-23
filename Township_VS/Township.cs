@@ -38,9 +38,9 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.7.0";
+        public const string PluginVersion = "0.1.7.5";
         // Phase    - getting basic totems working
-        // Major    - getting a gui for SMAI working
+        // Major    - getting a gui for SettlementManager working
         
 
         // Singleton stuff - boy, I hope my teachers don't see this
@@ -51,7 +51,7 @@ namespace Township
         public static TownshipManager Instance { get { return instance.Value; } }
 
 
-        public List<SMAI> SMAIList = new List<SMAI>(); // list of SMAI that were created
+        public List<SettlementManager> SMAIList = new List<SettlementManager>(); // list of SettlementManager that were created
 
         private void Awake()
         {
@@ -73,7 +73,7 @@ namespace Township
 
         public readonly int CS_buildrange = 20;
         public readonly int Extender_buildrange = 20;
-        public readonly int connection_range = 30; // range at which a SMAI/Expanders can connect
+        public readonly int connection_range = 30; // range at which a SettlementManager/Expanders can connect
 
         public readonly int SOI_range = 20; // Sphere of Influence
 
@@ -97,7 +97,7 @@ namespace Township
                 new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 10 }
             };
 
-            CP.PiecePrefab.AddComponent<SMAI>();
+            CP.PiecePrefab.AddComponent<SettlementManager>();
 
             CP.PiecePrefab.AddComponent<CraftingStation>();
             TS_CS = CP.PiecePrefab.GetComponent<CraftingStation>();
@@ -221,28 +221,28 @@ namespace Township
         }
 
     /*
-     *  This function is called both when a new SMAI is created when a new Heart is placed
+     *  This function is called both when a new SettlementManager is created when a new Heart is placed
      *      AND when a world is loaded
      */
-    public void registerSMAI( SMAI newSMAI )
+    public void registerSMAI( SettlementManager newSMAI )
         {
-            Jotunn.Logger.LogInfo("Registering new SMAI " + newSMAI.settlementName);
+            Jotunn.Logger.LogInfo("Registering new SettlementManager " + newSMAI.settlementName);
             SMAIList.Add(newSMAI);
         }
 
         /*
          *  This function is called when a Heart totem is destroyed
          */
-        public void unregisterSMAI( SMAI oldSMAI )
+        public void unregisterSMAI( SettlementManager oldSMAI )
         {
-            Jotunn.Logger.LogInfo("Unregistering new SMAI " + oldSMAI.settlementName);
-            // ping all totems of this SMAI that thair parentSMAI is long longer there :'(
+            Jotunn.Logger.LogInfo("Unregistering new SettlementManager " + oldSMAI.settlementName);
+            // ping all totems of this SettlementManager that thair parentSMAI is long longer there :'(
             SMAIList.Remove(oldSMAI);
         }
 
-        public SMAI PosInWhichSettlement(Vector3 pos)
+        public SettlementManager PosInWhichSettlement(Vector3 pos)
         {
-            foreach(SMAI settlement in SMAIList)
+            foreach(SettlementManager settlement in SMAIList)
             {
                 if( settlement.isPosInThisSettlement(pos) && settlement.isActive )
                 {

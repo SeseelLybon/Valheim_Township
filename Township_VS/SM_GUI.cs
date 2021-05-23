@@ -89,7 +89,7 @@ namespace Township
             }
         }
 
-        public void showGUI(SMAI localSMAI)
+        public void showGUI(SettlementManager localSMAI)
         {
             text_settlementName.name = localSMAI.settlementName;
             checkbox_settlementIsActive.SetActive( localSMAI.isActive );

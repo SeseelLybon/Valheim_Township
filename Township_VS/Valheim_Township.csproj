@@ -81,7 +81,7 @@
     <Compile Include="Definer_Sub.cs" />
     <Compile Include="Expander.cs" />
     <Compile Include="Extender.cs" />
-    <Compile Include="SMAI.cs" />
+    <Compile Include="SettlementManager.cs" />
     <Compile Include="Properties\IgnoreAccessModifiers.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SM_GUI.cs" />

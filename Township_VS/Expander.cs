@@ -21,8 +21,8 @@ using Logger = Jotunn.Logger;
 namespace Township
 {
     // This class is for use on the Expander totems.
-    // Their main purpose is to expand the SMAI's sphere of unfluence.
-    // Most functions are about passing questions on to the SMAI.
+    // Their main purpose is to expand the SettlementManager's sphere of unfluence.
+    // Most functions are about passing questions on to the SettlementManager.
 
     class Expander : MonoBehaviour, Hoverable, Interactable
     {
@@ -37,7 +37,7 @@ namespace Township
 
         private bool isPlaced = false; // if the Piece was placed before Awake/Start placed in the world (aka loaded from save data rather than placed by the player
 
-        public SMAI parentSMAI; // the SMAI that is connected to this expander
+        public SettlementManager parentSMAI; // the SettlementManager that is connected to this expander
 
         public bool isConnected =  false;   // where the Expander has a connection
         public bool isActive = false;       // whether the Expander can recieve connections
@@ -154,7 +154,7 @@ namespace Township
         {
             //Change whether the Expander can connect in this moment
 
-            SMAI SMAIasdf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
+            SettlementManager SMAIasdf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
 
             if (isActive && toConnect && SMAIasdf != null && SMAIasdf.isActive)
             {

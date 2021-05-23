@@ -18,10 +18,10 @@ using Logger = Jotunn.Logger;
 namespace Township
 {
 
-    // Funfact; the SMAI and the Heart are intrisicly connected because I'm lazy. So in the code they're generally one and the same.
-    // The SMAI referencing to the manager and Heart referencing to the piece
+    // Funfact; the SettlementManager and the Heart are intrisicly connected because I'm lazy. So in the code they're generally one and the same.
+    // The SettlementManager referencing to the manager and Heart referencing to the piece
 
-    class SMAI : MonoBehaviour, Hoverable, Interactable
+    class SettlementManager : MonoBehaviour, Hoverable, Interactable //SetMan
     {
 
         public string settlementName;
@@ -33,7 +33,7 @@ namespace Township
         private ZNetView m_nview;
         private TownshipManager m_tsManager;
 
-        private List<Expander> expanderList = new List<Expander>(); // list of expander totems connected to this SMAI
+        private List<Expander> expanderList = new List<Expander>(); // list of expander totems connected to this SettlementManager
 
         private void Awake()
         {
@@ -155,7 +155,7 @@ namespace Township
             if (toactive)// && !isActive) // if making active and is not active, activate
             {
                 // test if there's another settlement nearby
-                SMAI SMAIasdf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
+                SettlementManager SMAIasdf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
                 if (SMAIasdf == null ) // null means it isn't in a settlement
                 {
                     m_nview.GetZDO().Set("isActive", true);

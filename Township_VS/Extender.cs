@@ -36,7 +36,7 @@ namespace Township
 
         private bool isPlaced = false; // if the Piece was placed before Awake/Start placed in the world (aka loaded from save data rather than placed by the player
 
-        public SMAI parentSMAI; // the SMAI that is connected to this extender
+        public SettlementManager parentSMAI; // the SettlementManager that is connected to this extender
         public bool isOwned; // whether the 
 
 
@@ -79,8 +79,8 @@ namespace Township
 
 
         /*
-         * find the nearest SMAI and if it is close enough use that as parentSMAI
-        public SMAI getNearbySMAI () {
+         * find the nearest SettlementManager and if it is close enough use that as parentSMAI
+        public SettlementManager getNearbySMAI () {
             // ask totems if they're close enough
             // if totem is nearby, ask for it's parentSMAI
         }
@@ -98,7 +98,7 @@ namespace Township
         /*
         private void OnDestroy()
         {
-            // if this Piece is destroyed, remove from the SMAI's totem list
+            // if this Piece is destroyed, remove from the SettlementManager's totem list
             parentSMAI.unregisterExpanderTotem( this );
         }
         */
@@ -123,7 +123,7 @@ namespace Township
         {
             if (toactive && !isActive) // if true and false, activate
             {
-                SMAI SMAIalksf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
+                SettlementManager SMAIalksf = m_tsManager.PosInWhichSettlement(m_piece.GetCenter());
                 if (SMAIalksf == null || !SMAIalksf.isActive) // null means it isn't in a settlement
                 {
                     m_nview.GetZDO().Set("isActive", true);
