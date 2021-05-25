@@ -38,9 +38,9 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.7.5";
+        public const string PluginVersion = "0.1.8.0";
         // Phase    - getting basic totems working
-        // Major    - getting a gui for SettlementManager working
+        // Major    - Reworking how everything works
         
 
         // Singleton stuff - boy, I hope my teachers don't see this
@@ -49,9 +49,12 @@ namespace Township
         //private static readonly object managerLock = new object(); 
         private static Lazy<TownshipManager> instance = new Lazy<TownshipManager>(() => new TownshipManager());
         public static TownshipManager Instance { get { return instance.Value; } }
+        //public static List<ExpanderSoul>  = new List<ExpanderSoul>();
 
 
-        public List<SettlementManager> SMAIList = new List<SettlementManager>(); // list of SettlementManager that were created
+        public readonly string settlemanangerprefabname = "SettleManager";
+        public readonly string expandersoulprefabname = "ExpanderSoul";
+
 
         private void Awake()
         {
@@ -69,6 +72,24 @@ namespace Township
 
 
             loadLocilizations();
+        }
+
+        List<ZDO> SettlementManagerZDOs;
+
+        private void Start()
+        {
+            //TownshipManagerZDOID = "";
+
+            //TownshipManagerZDO = ZDOMan.instance.GetZDO(TownshipManagerZDOID);
+
+
+            ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
+
+            foreach(ZDO setmanzdo in SettlementManagerZDOs)
+            {
+                SettlementManager.m_AllSettleMans.Add(new SettlementManager(setmanzdo) );
+            }
+
         }
 
         public readonly int CS_buildrange = 20;
@@ -123,7 +144,7 @@ namespace Township
                 new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 10 },
             };
 
-            CP.PiecePrefab.AddComponent<Expander>();
+            CP.PiecePrefab.AddComponent<ExpanderBody>();
 
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>();
@@ -226,8 +247,8 @@ namespace Township
      */
     public void registerSMAI( SettlementManager newSMAI )
         {
-            Jotunn.Logger.LogInfo("Registering new SettlementManager " + newSMAI.settlementName);
-            SMAIList.Add(newSMAI);
+            Jotunn.Logger.LogInfo("Registering new SettlementManager " + newSMAI.settlementName );
+            SettlementManager.m_AllSettleMans.Add(newSMAI);
         }
 
         /*
@@ -237,14 +258,14 @@ namespace Township
         {
             Jotunn.Logger.LogInfo("Unregistering new SettlementManager " + oldSMAI.settlementName);
             // ping all totems of this SettlementManager that thair parentSMAI is long longer there :'(
-            SMAIList.Remove(oldSMAI);
+            SettlementManager.m_AllSettleMans.Remove(oldSMAI);
         }
 
         public SettlementManager PosInWhichSettlement(Vector3 pos)
         {
-            foreach(SettlementManager settlement in SMAIList)
+            foreach(SettlementManager settlement in SettlementManager.m_AllSettleMans)
             {
-                if( settlement.isPosInThisSettlement(pos) && settlement.isActive )
+                if( settlement.isPosInThisSettlement(pos) )
                 {
                     return settlement;
                 }
