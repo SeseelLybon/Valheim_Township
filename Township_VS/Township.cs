@@ -87,7 +87,7 @@ namespace Township
 
             foreach(ZDO setmanzdo in SettlementManagerZDOs)
             {
-                SettlementManager.m_AllSettleMans.Add(new SettlementManager(setmanzdo) );
+                SettlementManager.AllSettleMans.Add(new SettlementManager(setmanzdo) );
             }
 
         }
@@ -102,9 +102,11 @@ namespace Township
 
         private void addPieces()
         {
+            CustomPiece CP;
 
             ///////////////////////////////// Heart /////////////////////////////////
 
+            /*
             // duplicating because I'm too lazy to deal with assets right now.
             //CustomPiece CP = new CustomPiece("piece_HeartSettlement", "stone_pillar", "Hammer");
             CustomPiece CP = new CustomPiece("piece_TS_Heart", "stone_wall_4x2", "Hammer");
@@ -128,7 +130,7 @@ namespace Township
             PieceManager.Instance.AddPiece(CP);
 
             Jotunn.Logger.LogDebug("Added Heart Totem to pieceTable Hammer");
-
+            */
 
             ///////////////////////////////// EXPANDERS /////////////////////////////////
 
@@ -248,7 +250,7 @@ namespace Township
     public void registerSMAI( SettlementManager newSMAI )
         {
             Jotunn.Logger.LogInfo("Registering new SettlementManager " + newSMAI.settlementName );
-            SettlementManager.m_AllSettleMans.Add(newSMAI);
+            SettlementManager.AllSettleMans.Add(newSMAI);
         }
 
         /*
@@ -258,12 +260,12 @@ namespace Township
         {
             Jotunn.Logger.LogInfo("Unregistering new SettlementManager " + oldSMAI.settlementName);
             // ping all totems of this SettlementManager that thair parentSMAI is long longer there :'(
-            SettlementManager.m_AllSettleMans.Remove(oldSMAI);
+            SettlementManager.AllSettleMans.Remove(oldSMAI);
         }
 
         public SettlementManager PosInWhichSettlement(Vector3 pos)
         {
-            foreach(SettlementManager settlement in SettlementManager.m_AllSettleMans)
+            foreach(SettlementManager settlement in SettlementManager.AllSettleMans)
             {
                 if( settlement.isPosInThisSettlement(pos) )
                 {

@@ -24,42 +24,47 @@ namespace Township
     class SettlementManager : MonoBehaviour //SettleMan
     {
 
-        public static List<SettlementManager> m_AllSettleMans = new List<SettlementManager>();
+        public static List<SettlementManager> AllSettleMans = new List<SettlementManager>();
 
-
-        public ZDOID settlementZDOID;
-        public ZDO settlementZDO;
 
         private TownshipManager m_tsManager;
 
+        public ZDOID myZDOID;
+        public ZDO myZDO;
+        public List<ExpanderSoul> expanderSoulList = new List<ExpanderSoul>(); // list of expander totems connected to this SettlementManager
+
         public string settlementName
         {
-            get { return settlementZDO.GetString("settlementName", "Elktown"); }
-            set { settlementZDO.Set("settlementName", value); }
+            get { return myZDO.GetString("settlementName", "Elktown"); }
+            set { myZDO.Set("settlementName", value); }
+        }
+        public float happiness
+        {
+            get { return myZDO.GetFloat("happiness"); }
+            set { myZDO.Set("happiness", value); }
+        }
+        public int amount_villagers
+        {
+            get { return myZDO.GetInt("amount_villagers"); }
+            set { myZDO.Set("amount_villagers", value); }
         }
 
         public Vector3 centerofSOI;
         public ExpanderBody centerExpander;
 
-        public int testNumber;
-        public float happiness;
-        public int amount_villagers;
-
-
-        private List<ExpanderSoul> expanderSoulList = new List<ExpanderSoul>(); // list of expander totems connected to this SettlementManager
 
         // called by Townshipmanager on load
         public SettlementManager(ZDO settleManZDO)
         {
-            settlementZDO = settleManZDO;
-            settlementZDOID = settlementZDO.m_uid;
+            myZDO = settleManZDO;
+            myZDOID = myZDO.m_uid;
 
 
             List<ZDO> extenderSoulZDOs = new List<ZDO>();
             ZDOMan.instance.GetAllZDOsWithPrefab(m_tsManager.expandersoulprefabname, extenderSoulZDOs);
             foreach (ZDO extendersoulzdo in extenderSoulZDOs)
             {
-                if( extendersoulzdo.GetZDOID("settlementZDOID") == settlementZDOID)
+                if( extendersoulzdo.GetZDOID("settlementZDOID") == myZDOID)
                 {
                     expanderSoulList.Add(new ExpanderSoul(extendersoulzdo) );
                 }
@@ -73,9 +78,9 @@ namespace Township
         // called when creating a new Settlemanager
         public SettlementManager()
         {
-            settlementZDO = ZDOMan.instance.CreateNewZDO(Vector3.zero);
-            settlementZDO.m_persistent = true;
-            settlementZDO.SetPrefab( "Anima".GetStableHashCode() );
+            myZDO = ZDOMan.instance.CreateNewZDO(Vector3.zero);
+            myZDO.m_persistent = true;
+            myZDO.SetPrefab( "Anima".GetStableHashCode() );
 
 
 
@@ -92,8 +97,8 @@ namespace Township
             //  only the server should run this
             if (Jotunn.ZNetExtension.IsLocalInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance))
             {
-                settlementZDO.Set("TestNumber", settlementZDO.GetInt("TestNumber") + 1);
-                Jotunn.Logger.LogDebug(settlementZDO.GetString("settlementName") + " thinks, therefore it is.");
+                myZDO.Set("TestNumber", myZDO.GetInt("TestNumber") + 1);
+                Jotunn.Logger.LogDebug(myZDO.GetString("settlementName") + " thinks, therefore it is.");
             }
         }
 
@@ -230,6 +235,16 @@ namespace Township
             }
 
             return temp /= expanderSoulList.Count();
+        }
+
+        public void RegisterExpanderSoul( ExpanderSoul newsoul, ZDO newsoulZDO )
+        {
+            expanderSoulList.Add(newsoul);
+        }
+
+        public void unRegisterExpanderSoul(ExpanderSoul oldsoul)
+        {
+            expanderSoulList.Remove(oldsoul);
         }
 
 

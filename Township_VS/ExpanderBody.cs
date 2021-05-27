@@ -27,72 +27,116 @@ namespace Township
     class ExpanderBody : MonoBehaviour, Hoverable, Interactable
     {
 
-        public string settlementName;
-
-
         public Piece m_piece;
         public TownshipManager m_tsManager;
-
-        public static List<ExpanderBody> m_AllExpanderBodies = new List<ExpanderBody>();
-
-        public ExpanderSoul mySoul;
-
         private ZNetView m_nview;
 
-        public ZDO expanderbodyZDO;
+        public static List<ExpanderBody> AllExpanderBodies = new List<ExpanderBody>();
+
+        public ZDO myZDO;
+        public ZDOID myZDOID;
+        public ExpanderSoul mySoul;
+
 
         public bool isActive
         {
-            get { return expanderbodyZDO.GetBool("isActive"); }
-            set { expanderbodyZDO.Set("isActive", value); }
+            get { return myZDO.GetBool("isActive"); }
+            set { myZDO.Set("isActive", value); }
         }
-
         public bool isConnected
         {
-            get { return expanderbodyZDO.GetBool("isConnected"); }
-            set { expanderbodyZDO.Set("isConnected", value); }
+            get { return myZDO.GetBool("isConnected"); }
+            set { myZDO.Set("isConnected", value); }
         }
-
-
-        private void Awake()
+        public bool hasSoul
         {
-            m_nview = GetComponent<ZNetView>();
-            m_piece = GetComponent<Piece>();
-            m_tsManager = TownshipManager.Instance;
-            GetComponent<WearNTear>().m_onDestroyed += OnDestroyed;
+            get { return myZDO.GetBool("hasSoul"); }
+            set { myZDO.Set("hasSoul", value); }
         }
 
         private void Start()
         {
-            if (m_piece.IsPlacedByPlayer())
+            m_nview = GetComponent<ZNetView>();
+            m_piece = GetComponent<Piece>();
+            m_tsManager = TownshipManager.Instance;
+
+            if (m_piece.IsPlacedByPlayer() & m_nview.IsOwner() )
             {
-                
-                // if ZDO.getbool wasPlaced == true
-                // Skip over specific initializer stuff
-                // else
-                // ZDO.set wasPlaced == true;
-                // do specific initializer stuffs
+                GetComponent<WearNTear>().m_onDestroyed += OnDestroyed;
+                myZDO = m_nview.GetZDO();
+
+                m_nview.SetPersistent(true);
+                AllExpanderBodies.Add(this);
+
+                m_nview.Register<bool>("changeActive", RPC_changeActive);
+                m_nview.Register<bool, bool>("createNewSoul", RPC_changeConnection);
+
+                if (!hasSoul)
+                {
+                    // no soul in ZDO, then a new expander;
+
+                    // Populate the fresh ZDO that was just created with all the fun fields.
+                    myZDO.Set("isActive", false);
+                    myZDO.Set("isConnected", false);
+                    myZDO.Set("position", m_piece.m_center);
 
 
+                    // this operation can only be done by the server!
+                    //mySoul = new ExpanderSoul(myZDO);
+                    //ZRoutedRPC.instance.invoke(ZRoutedRPC.instance.GetServerPeerId, "CALLNAME", package);
+
+
+                    ZRoutedRpc.instance.InvokeRoutedRPC(ZRoutedRpc.instance.GetServerPeerID(), "createNewSoul", myZDO);
+
+
+                    hasSoul = true;
+                } else
+                {
+                    // find the soul
+                    foreach (SettlementManager setman in SettlementManager.AllSettleMans)
+                    {
+                        foreach(ExpanderSoul soul in setman.expanderSoulList)
+                        {
+                            if ( soul.myBodyZDOID == myZDOID )
+                            {
+                                mySoul = soul;
+                                break;
+                            }
+                        }
+                        if ( mySoul != null ) break;
+                    }
+                }
                 Jotunn.Logger.LogDebug("Doing stuff to expander that was placed by a player");
 
 
-                m_nview.SetPersistent(true);
-
-                m_AllExpanderBodies.m_AllExpanders.Add(this);
-
-                
 
 
-                expanderbodyZDO = m_nview.GetZDO();
 
-                expanderbodyZDO.Set("isActive", expanderbodyZDO.GetBool("isActive", false));
-                expanderbodyZDO.Set("position", expanderbodyZDO.GetVec3("position", m_piece.m_center ));
+                // how to register RPC
+                //m_nview.Register<bool>("changeActive", RPC_changeActive);
 
-                m_nview.Register<bool>("changeActive", RPC_changeActive);
+                // how to invoke RPC
+                // m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", isActive);
 
+                // note to self; this line sends an RPC call only to the server instance
+                // ZRoutedRPC.instance.invoke(ZRoutedRPC.instance.GetServerPeerId, "CALLNAME", package)
+            }
+        }
 
-                m_nview.InvokeRPC( ZNetView.Everybody, "changeActive", isActive);
+        public void RPC_createNewSoul(long sender, ZDO myzdo)
+        {
+            if (Jotunn.ZNetExtension.IsServerInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance))
+            {
+                mySoul = new ExpanderSoul(myZDO);
+            }
+        }
+
+        public void RPC_changeConnection(long sender, bool toConnect, bool checkconnections = true)
+        {
+
+            if (Jotunn.ZNetExtension.IsServerInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance))
+            {
+                mySoul.changeConnection(toConnect:toConnect, checkconnections:checkconnections);
             }
         }
 
@@ -111,7 +155,7 @@ namespace Township
             }
             if (!hold)
             {
-                if ( expanderbodyZDO.GetBool("isActive") )
+                if ( myZDO.GetBool("isActive") )
                 {
                     m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", false);
                     return true;
@@ -137,70 +181,38 @@ namespace Township
                 if (toactive)// && !isActive) // if true and false
                 {
                     isActive = true;
-                    changeConnection(toConnect: true, checkconnections: true); // if I can connect, it'd be nice if I was
+                    ZRoutedRpc.instance.InvokeRoutedRPC(ZRoutedRpc.instance.GetServerPeerID(), "changeConnection", true, true);
+                    //changeConnection(toConnect: true, checkconnections: true); // if I can connect, it'd be nice if I was
                     GetComponent<CraftingStation>().m_rangeBuild = 10;
                 }
                 else if (!toactive)// && isActive) // if false and true
                 {
                     isActive = false;
-                    changeConnection(toConnect: false, checkconnections: true); // relinquesh connection when deactivatin
+                    //changeConnection(toConnect: false, checkconnections: true); // relinquesh connection when deactivatin
                     GetComponent<CraftingStation>().m_rangeBuild = 0;
                 }
             }
         }
 
-        public void changeConnection(bool toConnect, bool checkconnections = true)
-        {
-            //Change whether the Expander can connect in this moment
-
-            SettlementManager tempSetMan = m_tsManager.PosInWhichSettlement(expanderbodyZDO.GetVec3("position", Vector3.zero));
-
-            if (expanderbodyZDO.GetBool("isActive") && toConnect && tempSetMan != null)
-            {
-                parentSettleMan = tempSetMan;
-                expanderbodyZDO.Set("isConnected", true);
-                Jotunn.Logger.LogInfo("Connecting Expander");
-            }
-            else if (!toConnect)
-            {
-                parentSettleMan = null;
-                expanderbodyZDO.Set("isConnected", false);
-                Jotunn.Logger.LogInfo("Disconnecting Expander");
-            }
-            else if (tempSetMan == null)
-            {
-                parentSettleMan = null;
-                expanderbodyZDO.Set("isConnected", false);
-                Jotunn.Logger.LogInfo("No nearby or active Settlement found!");
-            }
-            else
-            {
-                Jotunn.Logger.LogFatal("Expander.changeConnection() had an outcome I didn't expect");
-            }
-
-            if (checkconnections && tempSetMan != null)
-            {
-                tempSetMan.checkConnectionsWeb();
-            }
-        }
-
         public bool UseItem(Humanoid user, ItemDrop.ItemData item)
         {
+            // if wacked with the "Stick of creating settlements", create a new settlement.
             return false;
-            // invoke the move thingy here with... an item... somehow?
         }
 
         public void OnDestroyed()
         {
-            mySoul.onDestroyed();
+            if( m_nview.IsOwner())
+                if (Jotunn.ZNetExtension.IsServerInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance))
+                    mySoul.OnDestroyed();
         }
 
         public string GetHoverName()
         {
             // showing the name of the object
-            if (parentSettleMan != null)
+            if (mySoul.parentSettleMan != null)
             {
-                return "Expander of " + parentSettleMan.settlementName;
+                return "Expander of " + myZDO.GetString("settlementName");
             } else
             {
                 return "Expander of None";
@@ -213,9 +225,7 @@ namespace Township
             return GetHoverName() +
                 "\n Active: " + isActive +
                 "\n Connected: " + isConnected +
-                "\n Expanders: " + m_AllExpanders.Count();
+                "\n Expanders: " + AllExpanderBodies.Count();
         }
-
-
     }
 }

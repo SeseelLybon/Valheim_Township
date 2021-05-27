@@ -79,7 +79,8 @@
   <ItemGroup>
     <Compile Include="Definer.cs" />
     <Compile Include="Definer_Sub.cs" />
-    <Compile Include="Expander.cs" />
+    <Compile Include="ExpanderBody.cs" />
+    <Compile Include="ExpanderSoul.cs" />
     <Compile Include="Extender.cs" />
     <Compile Include="SettlementManager.cs" />
     <Compile Include="Properties\IgnoreAccessModifiers.cs" />
