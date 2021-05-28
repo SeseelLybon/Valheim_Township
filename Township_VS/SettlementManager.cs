@@ -27,7 +27,7 @@ namespace Township
         public static List<SettlementManager> AllSettleMans = new List<SettlementManager>();
 
 
-        private TownshipManager m_tsManager;
+        private readonly TownshipManager m_tsManager;
 
         public ZDOID myZDOID;
         public ZDO myZDO;
@@ -50,42 +50,46 @@ namespace Township
         }
 
         public Vector3 centerofSOI;
-        public ExpanderBody centerExpander;
+        public ExpanderSoul centerExpander;
 
 
         // called by Townshipmanager on load
         public SettlementManager(ZDO settleManZDO)
         {
+            m_tsManager = TownshipManager.Instance;
+            Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
             myZDO = settleManZDO;
+            myZDO.m_persistent = true;
             myZDOID = myZDO.m_uid;
 
 
-            List<ZDO> extenderSoulZDOs = new List<ZDO>();
-            ZDOMan.instance.GetAllZDOsWithPrefab(m_tsManager.expandersoulprefabname, extenderSoulZDOs);
-            foreach (ZDO extendersoulzdo in extenderSoulZDOs)
+            foreach (ExpanderSoul expandersoul in ExpanderSoul.AllExpanderSouls)
             {
-                if( extendersoulzdo.GetZDOID("settlementZDOID") == myZDOID)
-                {
-                    expanderSoulList.Add(new ExpanderSoul(extendersoulzdo) );
-                }
+                if(expandersoul.isActive)
+                    if(expandersoul.isConnected)
+                        if (expandersoul.parentSettleManZDOID == myZDOID)
+                            expanderSoulList.Add( expandersoul );
             }
 
 
             InvokeRepeating("think", 5f, 5f);
             centerofSOI = calcCenterofSOI();
+            calcCenterExpander();
         }
 
         // called when creating a new Settlemanager
         public SettlementManager()
         {
+            m_tsManager = TownshipManager.Instance;
+            Jotunn.Logger.LogDebug("Constructing new SettlementManager");
             myZDO = ZDOMan.instance.CreateNewZDO(Vector3.zero);
             myZDO.m_persistent = true;
-            myZDO.SetPrefab( "Anima".GetStableHashCode() );
-
+            myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode() );
 
 
             InvokeRepeating("think", 5f, 5f);
             centerofSOI = calcCenterofSOI();
+            calcCenterExpander();
         }
 
 
@@ -95,7 +99,7 @@ namespace Township
         public void think()
         {
             //  only the server should run this
-            if (Jotunn.ZNetExtension.IsLocalInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance))
+            if ( m_tsManager.IsServerorLocal() )
             {
                 myZDO.Set("TestNumber", myZDO.GetInt("TestNumber") + 1);
                 Jotunn.Logger.LogDebug(myZDO.GetString("settlementName") + " thinks, therefore it is.");
@@ -106,9 +110,9 @@ namespace Township
 
         public bool isPosInThisSettlement( Vector3 pos )
         {
-            foreach( ExpanderBody totem in expanderList )
+            foreach( ExpanderSoul expander in expanderSoulList)
             {
-                if ( Vector3.Distance(totem.m_piece.GetCenter(), pos) <= 30 )
+                if ( Vector3.Distance(expander.position, pos) <= 30 )
                 {
                     return true;
                 }
@@ -141,7 +145,7 @@ namespace Township
 
                 // Don't really need to check for Expanders that would be an unreasonable distance way (and not active).
                 // 10 bucks someone files a bug report about this.
-                foreach (ExpanderSoul c_expander in ExpanderSoul.m_AllExpanders)
+                foreach (ExpanderSoul c_expander in ExpanderSoul.AllExpanderSouls)
                 {
                     if (Vector3.Distance(c_expander.position, centerofSOI) <= canidate_range && c_expander.isActive)
                     {
@@ -155,7 +159,7 @@ namespace Township
                 // the meat of the function
                 foreach (ExpanderSoul n_expander in canidateexpanderList)
                 {
-                    if (Vector3.Distance(n_expander.m_piece.GetCenter(), centerExpander.m_piece.GetCenter() ) <= m_tsManager.connection_range && n_expander.isActive)
+                    if (Vector3.Distance(n_expander.position, centerExpander.position ) <= m_tsManager.connection_range && n_expander.isActive)
                     {
                         if (new_expanderList.Contains(n_expander))
                         {
@@ -193,11 +197,11 @@ namespace Township
             }
         }
 
-        private void checkConnectionsWeb_R(ExpanderBody c_expander, in List<ExpanderBody> localexpanderList, ref List<ExpanderBody> new_expanderList)
+        private void checkConnectionsWeb_R(ExpanderSoul c_expander, in List<ExpanderSoul> localexpanderList, ref List<ExpanderSoul> new_expanderList)
         {
-            foreach (ExpanderBody n_expander in localexpanderList)
+            foreach (ExpanderSoul n_expander in localexpanderList)
             {
-                if (Vector3.Distance(n_expander.m_piece.GetCenter(), c_expander.m_piece.GetCenter()) <= m_tsManager.connection_range && n_expander.isActive) // this time test against c_expander *not* heart/m_piece.center
+                if (Vector3.Distance(n_expander.position, c_expander.position) <= m_tsManager.connection_range && n_expander.isActive) // this time test against c_expander *not* heart/m_piece.center
                 {
                     if (new_expanderList.Contains(n_expander))
                     {
@@ -216,9 +220,9 @@ namespace Township
             float shortestDistancefromCOSOI = float.MaxValue;
             calcCenterofSOI();
 
-            foreach (ExpanderBody expander in expanderSoulList)
+            foreach (ExpanderSoul expander in expanderSoulList)
             {
-                float distancefromCOSOI = Vector3.Distance(centerofSOI, expander.m_piece.GetCenter());
+                float distancefromCOSOI = Vector3.Distance(centerofSOI, expander.position);
                 if (distancefromCOSOI <= shortestDistancefromCOSOI)
                 {
                     centerExpander = expander;
@@ -229,15 +233,15 @@ namespace Township
         private Vector3 calcCenterofSOI()
         {
             Vector3 temp = Vector3.zero;
-            foreach (ExpanderBody expander in expanderSoulList)
+            foreach (ExpanderSoul expander in expanderSoulList)
             {
-                temp += expander.m_piece.GetCenter();
+                temp += expander.position;
             }
 
             return temp /= expanderSoulList.Count();
         }
 
-        public void RegisterExpanderSoul( ExpanderSoul newsoul, ZDO newsoulZDO )
+        public void RegisterExpanderSoul( ExpanderSoul newsoul )
         {
             expanderSoulList.Add(newsoul);
         }

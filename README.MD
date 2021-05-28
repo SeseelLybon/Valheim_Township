@@ -12,4 +12,3 @@ Skyrim!
 Remember that lore bit about if you read Elder Scrolls you'll go blind?
 That.
 Except your brain goes mushy.
-Also might involve tentacles for some reason.

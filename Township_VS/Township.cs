@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.8.0";
+        public const string PluginVersion = "0.1.8.30";
         // Phase    - getting basic totems working
         // Major    - Reworking how everything works
         
@@ -46,51 +46,68 @@ namespace Township
         // Singleton stuff - boy, I hope my teachers don't see this
         // sourced from https://csharpindepth.com/articles/singleton#lock
         private TownshipManager() { }
-        //private static readonly object managerLock = new object(); 
         private static Lazy<TownshipManager> instance = new Lazy<TownshipManager>(() => new TownshipManager());
         public static TownshipManager Instance { get { return instance.Value; } }
-        //public static List<ExpanderSoul>  = new List<ExpanderSoul>();
 
 
         public readonly string settlemanangerprefabname = "SettleManager";
-        public readonly string expandersoulprefabname = "ExpanderSoul";
+        public readonly string expanderprefabname = "ExpanderSoul";
 
 
         private void Awake()
         {
 
-            // Jotunn comes with its own Logger class to provide a consistent Log style for all mods using it
-            Jotunn.Logger.LogWarning($"Hello World, from the Township plugin");
+            Jotunn.Logger.LogFatal("Hello World, from the Township plugin");
+            Jotunn.Logger.LogFatal("This isn't actually fatal, I just like it");
+            Jotunn.Logger.LogFatal("Well, it is: 100% of games started with this plug will return to desktop.");
 
 
             ItemManager.OnVanillaItemsAvailable += addPieces;
-
-            //ItemManager.OnVanillaItemsAvailable += addDefinerX1;
-            //ItemManager.OnVanillaItemsAvailable += addDefinerX2;
-            //ItemManager.OnVanillaItemsAvailable += addSubdefinerY1;
-
-
-
+            On.ZNet.Awake += OnZNetAvailable;
+            
             loadLocilizations();
         }
 
-        List<ZDO> SettlementManagerZDOs;
-
         private void Start()
+        {
+        }
+
+        private void OnZNetAvailable(On.ZNet.orig_Awake orig, ZNet self)
         {
             //TownshipManagerZDOID = "";
 
             //TownshipManagerZDO = ZDOMan.instance.GetZDO(TownshipManagerZDOID);
 
+            orig(self);
 
-            ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
-
-            foreach(ZDO setmanzdo in SettlementManagerZDOs)
+            if (IsServerorLocal())
             {
-                SettlementManager.AllSettleMans.Add(new SettlementManager(setmanzdo) );
-            }
+                Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
 
+                List<ZDO> SettlementManagerZDOs = new List<ZDO>();
+
+                ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
+
+                foreach (ZDO setmanzdo in SettlementManagerZDOs)
+                {
+                    SettlementManager.AllSettleMans.Add(new SettlementManager(setmanzdo));
+                }
+                Jotunn.Logger.LogDebug("Done Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan");
+
+
+                Jotunn.Logger.LogDebug("Loading ExpanderSoul ZDO's from ZDOMan");
+
+                List<ZDO> expanderSoulZDOs = new List<ZDO>();
+                ZDOMan.instance.GetAllZDOsWithPrefab(expanderprefabname, expanderSoulZDOs);
+
+                foreach (ZDO expanderZDO in expanderSoulZDOs)
+                {
+                    ExpanderSoul.AllExpanderSouls.Add( new ExpanderSoul(expanderZDO) );
+                }
+                Jotunn.Logger.LogDebug("Done Loading " + expanderSoulZDOs.Count() + " ExpanderSoul ZDO's from ZDOMan");
+            }
         }
+
 
         public readonly int CS_buildrange = 20;
         public readonly int Extender_buildrange = 20;
@@ -99,7 +116,6 @@ namespace Township
         public readonly int SOI_range = 20; // Sphere of Influence
 
         public CraftingStation TS_CS;
-
         private void addPieces()
         {
             CustomPiece CP;
@@ -140,10 +156,10 @@ namespace Township
             CP = new CustomPiece("piece_TS_Expander", "stone_pillar", "Hammer");
             CP.Piece.m_name = "$piece_TS_Expander";
             CP.Piece.m_description = "$piece_TS_Expander_desc";
-            CP.Piece.m_craftingStation = TS_CS;
+            CP.Piece.m_craftingStation = PrefabManager.Cache.GetPrefab<CraftingStation>("piece_workbench");
             CP.Piece.m_resources = new Piece.Requirement[]{
-                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Stone"), m_amount = 10 },
-                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 10 },
+                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Stone"), m_amount = 1 },
+                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 1 },
             };
 
             CP.PiecePrefab.AddComponent<ExpanderBody>();
@@ -275,6 +291,11 @@ namespace Township
 
 
             return null; // this is valid, means Pos isn't in a settlement
+        }
+
+        public bool IsServerorLocal()
+        {
+            return (Jotunn.ZNetExtension.IsLocalInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance)) ;
         }
     }
 }

@@ -15,6 +15,16 @@ using Jotunn.Managers;
 using Jotunn.Utils;
 using Logger = Jotunn.Logger;
 
+/*
+
+disabled whole class because atm I won't be using it.
+Still usefull for later when I finally start
+...
+*ugh*
+GUI work. :|
+Good luck future me o/
+~ present me... or past me?
+
 namespace Township
 {
     class SM_GUI : MonoBehaviour
@@ -92,7 +102,9 @@ namespace Township
         public void showGUI(SettlementManager localSMAI)
         {
             text_settlementName.name = localSMAI.settlementName;
-            checkbox_settlementIsActive.SetActive( localSMAI.isActive );
         }
     }
 }
+
+
+*/
