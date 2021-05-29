@@ -12,3 +12,10 @@ Skyrim!
 Remember that lore bit about if you read Elder Scrolls you'll go blind?
 That.
 Except your brain goes mushy.
+
+
+TODO:
+	Test what happens when:
+	an ExpanderBody gets unloaded,
+	an ExpanderSoul gets loaded without an ExpanderBody
+	an ExpanderBody gets loaded

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
@@ -14,13 +13,12 @@ using Jotunn.Configs;
 using Jotunn.Entities;
 using Jotunn.Managers;
 using Jotunn.Utils;
-//using JotunnModExample.ConsoleCommands;
 using Logger = Jotunn.Logger;
 
 
 namespace Township
 {
-    class ExpanderSoul
+    class ExpanderSoul : MonoBehaviour
     {
         public static List<ExpanderSoul> AllExpanderSouls = new List<ExpanderSoul>();
 
@@ -31,7 +29,6 @@ namespace Township
         public ZDO myZDO;
         public ZDOID myZDOID;
 
-        public ZDOID myBodyZDOID;
         public ExpanderBody myBody;
 
         public bool isActive
@@ -59,6 +56,11 @@ namespace Township
             get { return myZDO.GetZDOID("parentSettleManZDOID"); }
             set { myZDO.Set("parentSettleManZDOID", value); } // if this causes a NRE, then the call itself was bad
         }
+        public ZDOID myBodyZDOID
+        {
+            get { return myZDO.GetZDOID("myBodyZDOID"); }
+            set { myZDO.Set("myBodyZDOID", value); } // if this causes a NRE, then the call itself was bad
+        }
 
 
         // ////////////////////////////// CONSTRUCTORS
@@ -69,7 +71,33 @@ namespace Township
             m_tsManager = TownshipManager.Instance;
             Jotunn.Logger.LogDebug("Constructing ExpanderSoul from save.");
             myZDO = mysoulZDO;
+            myZDO.m_persistent = true;
+            myZDOID = myZDO.m_uid;
 
+            // check if my body still exists/has ZDO
+
+            List<ZDO> expanderBodyZDOs = new List<ZDO>();
+            ZDOMan.instance.GetAllZDOsWithPrefab("piece_TS_Expander", expanderBodyZDOs);
+
+            Jotunn.Logger.LogDebug("Seeing if ExpanderBody is among " + expanderBodyZDOs.Count() + " ExpanderBodyZDO's");
+
+            bool stillhasbody = false;
+            foreach (ZDO expanderbodyZDO in expanderBodyZDOs)
+            {
+                Jotunn.Logger.LogDebug(myZDOID + " vs " + expanderbodyZDO.GetZDOID("mySoulZDOID"));
+                if ( expanderbodyZDO.GetZDOID("mySoulZDOID") == myZDOID)
+                {
+                    Jotunn.Logger.LogDebug("ExpanderSoul still has a body.");
+                    stillhasbody = true;
+                    break;
+                }
+            }
+            if (!stillhasbody)
+            {
+                Jotunn.Logger.LogFatal("ExpanderSoul seems to no longer have a body.");
+                onDestroyed();
+                return;
+            }
             AllExpanderSouls.Add(this);
         }
 
@@ -79,7 +107,7 @@ namespace Township
             m_tsManager = TownshipManager.Instance;
             Jotunn.Logger.LogDebug("Constructing ExpanderSoul from ExpanderBody.");
             myBody = mybody;
-            myBodyZDOID = myBody.myZDOID;
+
 
             Jotunn.Logger.LogDebug("\t creating new ZDO for ExpanderSoul");
             myZDO = ZDOMan.instance.CreateNewZDO(Vector3.zero);
@@ -87,31 +115,37 @@ namespace Township
             myZDO.m_persistent = true;
 
             Jotunn.Logger.LogDebug("\t populating new ZDO");
-            myZDO.Set("isActive", myZDO.GetBool("isActive", false));
-            myZDO.Set("isConnected", myZDO.GetBool("isConnected", false));
-            myZDO.Set("position", myBody.m_piece.m_center);
+            isActive = false;
+            isConnected = false;
+            position = myBody.m_piece.GetCenter();
+            myBodyZDOID = myBody.myZDOID;
+            myBody.mySoulZDOID = myZDOID; // give myBody my ZDOID
 
             AllExpanderSouls.Add(this);
         }
 
-        // ////////////////////////////// METHODES
+        // ////////////////////////////// METHODES //////////////////////////////
 
         // called by myBody when it gets destroyed.
         // Soul also gets destroyed
-        public void OnDestroyed()
+        public void onDestroyed()
         {
-            Jotunn.Logger.LogDebug("An Expader Soul is being destroyed because its body is.");
-            if ( parentSettleMan != null )
+            Jotunn.Logger.LogDebug("An Expader Soul is being destroyed because its body no longer availabe");
+            if (parentSettleMan != null)
             {
                 parentSettleMan.unRegisterExpanderSoul(this);
             }
             AllExpanderSouls.Remove(this);
-            // Destroy self?
+            myZDO.m_persistent = false;
+            
+            //myZDO.Reset();
+            //Destroy(this);
         }
 
-        public void OnDestroy()
+        // called when unloading but not destroying
+        public void onDestroy()
         {
-            Jotunn.Logger.LogDebug("An Expader Soul is being destroyed.");
+            Jotunn.Logger.LogDebug("ExpanderSoul.OnDestroy()");
             AllExpanderSouls.Remove(this);
         }
 

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
@@ -14,7 +13,6 @@ using Jotunn.Configs;
 using Jotunn.Entities;
 using Jotunn.Managers;
 using Jotunn.Utils;
-//using JotunnModExample.ConsoleCommands;
 using Logger = Jotunn.Logger;
 
 
@@ -33,10 +31,7 @@ namespace Township
 
         public static List<ExpanderBody> AllExpanderBodies = new List<ExpanderBody>();
 
-        public ZDO mySoulZDO;
-        public ZDOID mySoulZDOID;
 
-        public ZDOID myZDOID;
 
 
         // This variable is only available to the Server!!!!!!
@@ -44,21 +39,28 @@ namespace Township
 
 
         public bool isActive
-        {
-            get { return mySoulZDO.GetBool("isActive"); }
-            set { mySoulZDO.Set("isActive", value); }
-        }
-        public bool isConnected
-        {
-            get { return mySoulZDO.GetBool("isConnected"); }
-            set { mySoulZDO.Set("isConnected", value); }
-        }
+        {   get { return mySoulZDO.GetBool("isActive"); }
+            set { mySoulZDO.Set("isActive", value); } }
 
+        public bool isConnected
+        {   get { return mySoulZDO.GetBool("isConnected"); }
+            set { mySoulZDO.Set("isConnected", value); } }
         public bool hasSoul
-        {
-            get { return m_nview.GetZDO().GetBool("hasSoul"); }
-            set { m_nview.GetZDO().Set("hasSoul", value); }
-        }
+        {   get { return m_nview.GetZDO().GetBool("hasSoul"); }
+            set { m_nview.GetZDO().Set("hasSoul", value); } }
+
+        public ZDO myZDO;
+        public ZDOID myZDOID
+        {   get { return myZDO.GetZDOID("myZDOID"); }
+            set { myZDO.Set("myZDOID", value); } }
+
+        public ZDO mySoulZDO;
+        public ZDOID mySoulZDOID
+        {   get { return myZDO.GetZDOID("mySoulZDOID"); }
+            set { myZDO.Set("mySoulZDOID", value); } }
+
+
+
 
         public void Start()
         {
@@ -76,7 +78,8 @@ namespace Township
 
                     AllExpanderBodies.Add(this);
                     m_nview.GetZDO().m_persistent = true;
-                    myZDOID = m_nview.GetZDO().m_uid;
+                    myZDO = m_nview.GetZDO();
+                    myZDOID = myZDO.m_uid;
 
                     m_nview.Register<bool>("changeActive", RPC_changeActive);
                     m_nview.Register<bool, bool>("changeConnection", RPC_changeConnection);
@@ -86,22 +89,15 @@ namespace Township
                     m_nview.Register("onDestroyed", RPC_OnDestroyed);
 
                     if (!hasSoul)
-                    {
+                    {   // no soul in ZDO, then a new expander;
 
                         Jotunn.Logger.LogDebug("Placed Expander had no soul, creating new one");
-                        // no soul in ZDO, then a new expander;
-
-                        // // Populate the fresh ZDO that was just created with all the fun fields.
-
 
                         // this operation can only be done by the server!
-                        //ZRoutedRpc.instance.InvokeRoutedRPC(ZRoutedRpc.instance.GetServerPeerID(), "createNewSoul", myZDO);
                         m_nview.InvokeRPC(ZNetView.Everybody, "createNewSoul");
-
                         // mySoul.connectBody(this); // createNewSoul also connects the body
+
                         hasSoul = true;
-
-
                     } else
                     {
                         Jotunn.Logger.LogDebug("Placed Expander has a soul, finding and connecting to that one");
@@ -113,15 +109,19 @@ namespace Township
                     }
 
                     m_nview.InvokeRPC( ZNetView.Everybody, "changeActive", isActive );
+                    m_nview.GetZDO().Set("mySoulZDOID", mySoulZDOID);
+
+                    mySoulZDOID = mySoulZDO.m_uid;
+
+                    Jotunn.Logger.LogDebug("ExpanderBody ZDOID: " + myZDOID);
+                    Jotunn.Logger.LogDebug("ExpanderSoul ZDOID: " + mySoulZDOID);
+
 
                     // how to register RPC
                     //m_nview.Register<bool>("changeActive", RPC_changeActive);
-
                     // how to invoke RPC
                     // m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", isActive);
 
-                    // note to self; this line sends an RPC call only to the server instance
-                    // ZRoutedRPC.instance.invoke(ZRoutedRPC.instance.GetServerPeerId, "CALLNAME", package)
                     Jotunn.Logger.LogDebug("Done doing stuff to ExpanderBody");
                 }
             }
@@ -141,9 +141,11 @@ namespace Township
         {
             if (m_tsManager.IsServerorLocal())
             {
-                Jotunn.Logger.LogDebug("RPC reciever RPC_connecttoSoul; connecting to body");
+                Jotunn.Logger.LogDebug("RPC reciever RPC_connecttoSoul; connecting to soul");
+                Jotunn.Logger.LogDebug("Picking through " + ExpanderSoul.AllExpanderSouls.Count() + " ExpanderSouls.");
                 foreach (ExpanderSoul soul in ExpanderSoul.AllExpanderSouls)
                 {
+                    Jotunn.Logger.LogDebug(myZDOID + " vs " + soul.myBodyZDOID);
                     if (soul.myBodyZDOID == myZDOID)
                     {
                         Jotunn.Logger.LogDebug("Found the soul");
@@ -152,11 +154,15 @@ namespace Township
                         mySoul.connectBody(this);
                     }
                 }
-                if (mySoul == null)
+                if (mySoul is null)
                 {
                     Jotunn.Logger.LogFatal("No soul found!");
-                    Jotunn.Logger.LogDebug("Emergency soul creation");
-                    m_nview.InvokeRPC(ZNetView.Everybody, "createNewSoul");
+                    Jotunn.Logger.LogFatal("NRE incoming!");
+                    hasSoul = false;
+                    myZDO.m_persistent = false;
+                    myZDO.Reset();
+                    //Jotunn.Logger.LogDebug("Emergency soul creation");
+                    //m_nview.InvokeRPC(ZNetView.Everybody, "createNewSoul");
                 }
             }
         }
@@ -169,39 +175,6 @@ namespace Township
                 Jotunn.Logger.LogDebug("RPC reciever RPC_changeConnection; changing connections : " + toConnect + " " + checkconnections);
                 mySoul.changeConnection(toConnect:toConnect, checkconnections:checkconnections);
             }
-        }
-
-        /* Function is now only for making active or not.
-          *  Will later be used to call the GUI
-          */
-        public bool Interact(Humanoid user, bool hold)
-        {
-            if (!user.IsOwner())
-            {
-                return true;
-            }
-            if (hold)
-            {
-                return false;
-            }
-            if (!hold)
-            {
-                if ( mySoulZDO.GetBool("isActive") )
-                {
-                    m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", false);
-                    return true;
-                }
-                else
-                {
-                    m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", true);
-                    return true;
-                }
-            }
-
-            // if !hold if active call gui, else throw soft warning
-            // if hold toggle active
-
-            return false;
         }
 
         public void RPC_changeActive(long sender, bool toactive)
@@ -253,7 +226,7 @@ namespace Township
         {
             if (m_tsManager.IsServerorLocal())
             {
-                mySoul.OnDestroyed();
+                mySoul.onDestroyed();
             }
         }
 
@@ -279,6 +252,39 @@ namespace Township
             }
         }
 
+        /* Function is now only for making active or not.
+          *  Will later be used to call the GUI
+          */
+        public bool Interact(Humanoid user, bool hold)
+        {
+            if (!user.IsOwner())
+            {
+                return true;
+            }
+            if (hold)
+            {
+                return false;
+            }
+            if (!hold)
+            {
+                if (mySoulZDO.GetBool("isActive"))
+                {
+                    m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", false);
+                    return true;
+                }
+                else
+                {
+                    m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", true);
+                    return true;
+                }
+            }
+
+            // if !hold if active call gui, else throw soft warning
+            // if hold toggle active
+
+            return false;
+        }
+
         public string GetHoverName()
         {
             return "Expander";
@@ -289,8 +295,9 @@ namespace Township
             // for the ward it's things like is_active and stuff.
             return GetHoverName() +
                 "\n Active: " + isActive +
-                "\n Connected: " + isConnected;// +
-                //"\n Expanders: " + AllExpanderBodies.Count();
+                "\n Connected: " + isConnected +
+                "\n ExpanderBodies: " + AllExpanderBodies.Count() +
+                "\n ExpanderSouls: " + ExpanderSoul.AllExpanderSouls.Count();
         }
     }
 }

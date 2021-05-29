@@ -54,12 +54,12 @@ namespace Township
 
 
         // called by Townshipmanager on load
-        public SettlementManager(ZDO settleManZDO)
+        public SettlementManager( ZDO settleManZDO )
         {
             m_tsManager = TownshipManager.Instance;
             Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
             myZDO = settleManZDO;
-            myZDO.m_persistent = true;
+            myZDO.m_persistent = false; // debugging, has to be true
             myZDOID = myZDO.m_uid;
 
 
@@ -70,6 +70,15 @@ namespace Township
                         if (expandersoul.parentSettleManZDOID == myZDOID)
                             expanderSoulList.Add( expandersoul );
             }
+            Jotunn.Logger.LogDebug(settlementName + " has loaded " + expanderSoulList.Count() + " Souls");
+
+            if( expanderSoulList.Count() == 0 )
+            {
+                Jotunn.Logger.LogDebug( settlementName + " has loaded no Souls. This SettleMan can't exist. Removing." );
+                myZDO.m_persistent = false;
+                AllSettleMans.Remove(this);
+                //Destroy(this, 0f);
+            }
 
 
             InvokeRepeating("think", 5f, 5f);
@@ -78,8 +87,9 @@ namespace Township
         }
 
         // called when creating a new Settlemanager
-        public SettlementManager()
+        public SettlementManager( ExpanderSoul expanderSoul )
         {
+
             m_tsManager = TownshipManager.Instance;
             Jotunn.Logger.LogDebug("Constructing new SettlementManager");
             myZDO = ZDOMan.instance.CreateNewZDO(Vector3.zero);
@@ -87,9 +97,9 @@ namespace Township
             myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode() );
 
 
-            InvokeRepeating("think", 5f, 5f);
             centerofSOI = calcCenterofSOI();
             calcCenterExpander();
+            InvokeRepeating("think", 5f, 5f);
         }
 
 
@@ -249,6 +259,10 @@ namespace Township
         public void unRegisterExpanderSoul(ExpanderSoul oldsoul)
         {
             expanderSoulList.Remove(oldsoul);
+            if( expanderSoulList.Count() == 0)
+            {
+                myZDO.m_persistent = false;
+            }
         }
 
 

@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.8.30";
+        public const string PluginVersion = "0.1.8.41";
         // Phase    - getting basic totems working
         // Major    - Reworking how everything works
         
@@ -63,16 +63,11 @@ namespace Township
 
 
             ItemManager.OnVanillaItemsAvailable += addPieces;
-            On.ZNet.Awake += OnZNetAvailable;
-            
+            On.ZNet.Start += OnZNetAvailable;
             loadLocilizations();
         }
 
-        private void Start()
-        {
-        }
-
-        private void OnZNetAvailable(On.ZNet.orig_Awake orig, ZNet self)
+        private void OnZNetAvailable(On.ZNet.orig_Start orig, ZNet self)
         {
             //TownshipManagerZDOID = "";
 
@@ -84,27 +79,25 @@ namespace Township
             {
                 Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
 
+                /*
                 List<ZDO> SettlementManagerZDOs = new List<ZDO>();
-
                 ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
 
                 foreach (ZDO setmanzdo in SettlementManagerZDOs)
                 {
-                    SettlementManager.AllSettleMans.Add(new SettlementManager(setmanzdo));
+                    SettlementManager.AllSettleMans.Add( new SettlementManager(setmanzdo) );
                 }
                 Jotunn.Logger.LogDebug("Done Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan");
-
-
-                Jotunn.Logger.LogDebug("Loading ExpanderSoul ZDO's from ZDOMan");
+                */
 
                 List<ZDO> expanderSoulZDOs = new List<ZDO>();
                 ZDOMan.instance.GetAllZDOsWithPrefab(expanderprefabname, expanderSoulZDOs);
-
+                Jotunn.Logger.LogDebug("Loading " + expanderSoulZDOs.Count() + " ExpanderSoul ZDO's from ZDOMan");
                 foreach (ZDO expanderZDO in expanderSoulZDOs)
                 {
-                    ExpanderSoul.AllExpanderSouls.Add( new ExpanderSoul(expanderZDO) );
+                    new ExpanderSoul(expanderZDO);
                 }
-                Jotunn.Logger.LogDebug("Done Loading " + expanderSoulZDOs.Count() + " ExpanderSoul ZDO's from ZDOMan");
+                Jotunn.Logger.LogDebug("Done Loading " + ExpanderSoul.AllExpanderSouls.Count() + " ExpanderSoul ZDO's from ZDOMan");
             }
         }
 
@@ -120,37 +113,8 @@ namespace Township
         {
             CustomPiece CP;
 
-            ///////////////////////////////// Heart /////////////////////////////////
-
-            /*
-            // duplicating because I'm too lazy to deal with assets right now.
-            //CustomPiece CP = new CustomPiece("piece_HeartSettlement", "stone_pillar", "Hammer");
-            CustomPiece CP = new CustomPiece("piece_TS_Heart", "stone_wall_4x2", "Hammer");
-            CP.Piece.m_name = "$piece_TS_Heart";
-            CP.Piece.m_description = "$piece_TS_Heart_desc";
-
-            CP.Piece.m_craftingStation = PrefabManager.Cache.GetPrefab<CraftingStation>("piece_workbench");
-
-            CP.Piece.m_resources = new Piece.Requirement[]{
-                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Stone"), m_amount = 10 },
-                new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 10 }
-            };
-
-            CP.PiecePrefab.AddComponent<SettlementManager>();
-
-            CP.PiecePrefab.AddComponent<CraftingStation>();
-            TS_CS = CP.PiecePrefab.GetComponent<CraftingStation>();
-            TS_CS.m_name = "$piece_TS_CS"; ;
-            TS_CS.m_rangeBuild = CS_buildrange; // 50 or 45 - the range is for the player *not* the piece. Does that matter?
-
-            PieceManager.Instance.AddPiece(CP);
-
-            Jotunn.Logger.LogDebug("Added Heart Totem to pieceTable Hammer");
-            */
 
             ///////////////////////////////// EXPANDERS /////////////////////////////////
-
-
 
             // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
             CP = new CustomPiece("piece_TS_Expander", "stone_pillar", "Hammer");
