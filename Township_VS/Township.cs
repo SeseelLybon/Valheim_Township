@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.8.41";
+        public const string PluginVersion = "0.1.8.50";
         // Phase    - getting basic totems working
         // Major    - Reworking how everything works
         
@@ -52,14 +52,13 @@ namespace Township
 
         public readonly string settlemanangerprefabname = "SettleManager";
         public readonly string expanderprefabname = "ExpanderSoul";
+        public GameObject expanderGO;
 
 
         private void Awake()
         {
 
-            Jotunn.Logger.LogFatal("Hello World, from the Township plugin");
-            Jotunn.Logger.LogFatal("This isn't actually fatal, I just like it");
-            Jotunn.Logger.LogFatal("Well, it is: 100% of games started with this plug will return to desktop.");
+            Jotunn.Logger.LogWarning("Hello World, from the Township plugin");
 
 
             ItemManager.OnVanillaItemsAvailable += addPieces;
@@ -77,7 +76,15 @@ namespace Township
 
             if (IsServerorLocal())
             {
-                Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
+                expanderGO = new GameObject(expanderprefabname);
+                //expanderGO.AddComponent<ZNetView>();
+
+                //ZNetScene.instance.m_nonNetViewPrefabs.Add( expanderGO );
+                ZNetScene.instance.m_namedPrefabs.Add(expanderprefabname.GetStableHashCode(), expanderGO);
+
+                //Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
+
+                //ZNetScene.m_namedPrefabs.Add(new KeyPair<int, GameObject>(expanderprefabname.GetStableHashCode(), expanderGO)); 
 
                 /*
                 List<ZDO> SettlementManagerZDOs = new List<ZDO>();
@@ -111,6 +118,7 @@ namespace Township
         public CraftingStation TS_CS;
         private void addPieces()
         {
+
             CustomPiece CP;
 
 

@@ -27,7 +27,7 @@ namespace Township
 
         public Piece m_piece;
         public TownshipManager m_tsManager;
-        private ZNetView m_nview;
+        public ZNetView m_nview;
 
         public static List<ExpanderBody> AllExpanderBodies = new List<ExpanderBody>();
 
@@ -47,7 +47,9 @@ namespace Township
             set { mySoulZDO.Set("isConnected", value); } }
         public bool hasSoul
         {   get { return m_nview.GetZDO().GetBool("hasSoul"); }
-            set { m_nview.GetZDO().Set("hasSoul", value); } }
+            set { m_nview.GetZDO().Set("hasSoul", value); }
+        }
+        public bool isPlaced;
 
         public ZDO myZDO;
         public ZDOID myZDOID
@@ -64,13 +66,18 @@ namespace Township
 
         public void Start()
         {
+            Jotunn.Logger.LogDebug("ExpanderBody.Start()");
+
             m_nview = GetComponent<ZNetView>();
             m_piece = GetComponent<Piece>();
             m_tsManager = TownshipManager.Instance;
 
 
-            if (m_piece.IsPlacedByPlayer()) {
-                if( m_nview.IsOwner() )
+            if (m_piece.IsPlacedByPlayer())
+            {
+                isPlaced = true;
+                Jotunn.Logger.LogDebug("ExpanderBody is placed by player");
+                if (m_tsManager.IsServerorLocal())
                 {
                     Jotunn.Logger.LogDebug("Doing stuff to expander that was placed by a player");
 
@@ -122,7 +129,7 @@ namespace Township
                     // how to invoke RPC
                     // m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", isActive);
 
-                    Jotunn.Logger.LogDebug("Done doing stuff to ExpanderBody");
+                    Jotunn.Logger.LogDebug("Done doing stuff to ExpanderBody\n");
                 }
             }
         }
@@ -157,19 +164,15 @@ namespace Township
                 if (mySoul is null)
                 {
                     Jotunn.Logger.LogFatal("No soul found!");
-                    Jotunn.Logger.LogFatal("NRE incoming!");
-                    hasSoul = false;
-                    myZDO.m_persistent = false;
-                    myZDO.Reset();
-                    //Jotunn.Logger.LogDebug("Emergency soul creation");
-                    //m_nview.InvokeRPC(ZNetView.Everybody, "createNewSoul");
+                    Jotunn.Logger.LogFatal("Emergency soul creation");
+                    m_nview.InvokeRPC(ZNetView.Everybody, "createNewSoul");
+                    m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", false);
                 }
             }
         }
 
         public void RPC_changeConnection(long sender, bool toConnect, bool checkconnections = true )
         {
-
             if (m_tsManager.IsServerorLocal())
             {
                 Jotunn.Logger.LogDebug("RPC reciever RPC_changeConnection; changing connections : " + toConnect + " " + checkconnections);
@@ -214,6 +217,7 @@ namespace Township
         {
             if (m_piece.IsPlacedByPlayer())
             {
+                Jotunn.Logger.LogDebug("ExpanderBody.OnDestroyed()");
                 if (m_nview.IsOwner())
                 {
                     m_nview.InvokeRPC(ZNetView.Everybody, "onDestroyed" );
@@ -226,6 +230,7 @@ namespace Township
         {
             if (m_tsManager.IsServerorLocal())
             {
+                Jotunn.Logger.LogDebug("ExpanderBody.RPC_OnDestroyed()");
                 mySoul.onDestroyed();
             }
         }
@@ -233,20 +238,26 @@ namespace Township
         // Called when the object is destroyed, either by unloading or anything
         public void OnDestroy()
         {
+            Jotunn.Logger.LogDebug("ExpanderBody.OnDestroy()");
             /*
             if( true )//m_piece.IsPlacedByPlayer() ) // can't call these objects because they're already gone.
                 if ( true) //m_nview.IsOwner() )
                     if(mySoul != null)
                         m_nview.InvokeRPC(ZNetView.Everybody, "onDestroy");
-
-            AllExpanderBodies.Remove(this);
             */
+            if( isPlaced)
+            {
+                if(!(mySoul is null))
+                    mySoul.disconnectBody();
+                AllExpanderBodies.Remove(this);
+            }
         }
 
         public void RPC_OnDestroy( long user )
         {
             if (m_tsManager.IsServerorLocal())
             {
+                Jotunn.Logger.LogDebug("ExpanderBody.RPC_OnDestroy()");
                 mySoul.disconnectBody();
                 mySoul = null;
             }
@@ -257,6 +268,7 @@ namespace Township
           */
         public bool Interact(Humanoid user, bool hold)
         {
+            Jotunn.Logger.LogDebug("ExpanderBody.Interact()");
             if (!user.IsOwner())
             {
                 return true;
@@ -292,12 +304,21 @@ namespace Township
 
         public string GetHoverText()
         {
-            // for the ward it's things like is_active and stuff.
-            return GetHoverName() +
-                "\n Active: " + isActive +
-                "\n Connected: " + isConnected +
-                "\n ExpanderBodies: " + AllExpanderBodies.Count() +
-                "\n ExpanderSouls: " + ExpanderSoul.AllExpanderSouls.Count();
+            if (mySoul is null)
+            {
+                return GetHoverName() +
+                    "\n This Body has no soul," + 
+                    "\n please destroy and place it again";
+            }
+            else
+            {
+                // for the ward it's things like is_active and stuff.
+                return GetHoverName() +
+                    "\n Active: " + isActive +
+                    "\n Connected: " + isConnected +
+                    "\n ExpanderBodies: " + AllExpanderBodies.Count() +
+                    "\n ExpanderSouls: " + ExpanderSoul.AllExpanderSouls.Count();
+            }
         }
     }
 }

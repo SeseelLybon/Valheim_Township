@@ -26,6 +26,8 @@ namespace Township
 
         public TownshipManager m_tsManager;
 
+        // public GameObject gameObject;
+
         public ZDO myZDO;
         public ZDOID myZDOID;
 
@@ -69,10 +71,16 @@ namespace Township
         public ExpanderSoul( ZDO mysoulZDO )
         {
             m_tsManager = TownshipManager.Instance;
+
+            //gameObject = new GameObject( m_tsManager.expanderprefabname );
+            //gameObject.AddComponent<ZNetView>();
+            //gameObject.GetComponent<ZNetView>().m_zdo = mysoulZDO;
+
             Jotunn.Logger.LogDebug("Constructing ExpanderSoul from save.");
             myZDO = mysoulZDO;
             myZDO.m_persistent = true;
             myZDOID = myZDO.m_uid;
+
 
             // check if my body still exists/has ZDO
 
@@ -105,13 +113,22 @@ namespace Township
         public ExpanderSoul( ExpanderBody mybody)
         {
             m_tsManager = TownshipManager.Instance;
+
+            //gameObject = new GameObject(m_tsManager.expanderprefabname);
+            //gameObject.AddComponent<ZNetView>();
+
             Jotunn.Logger.LogDebug("Constructing ExpanderSoul from ExpanderBody.");
             myBody = mybody;
 
 
             Jotunn.Logger.LogDebug("\t creating new ZDO for ExpanderSoul");
-            myZDO = ZDOMan.instance.CreateNewZDO(Vector3.zero);
-            myZDO.SetPrefab(m_tsManager.expanderprefabname.GetStableHashCode());
+
+            myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0,-10000,0));
+            //myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
+            myZDO.SetPrefab( m_tsManager.expanderprefabname.GetStableHashCode() );
+
+            //myZDO.Initialize(ZDOMan.instance);
+
             myZDO.m_persistent = true;
 
             Jotunn.Logger.LogDebug("\t populating new ZDO");
