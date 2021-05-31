@@ -29,13 +29,14 @@ namespace Township
 
         private readonly TownshipManager m_tsManager;
 
-        public ZDOID myZDOID;
         public ZDO myZDO;
-        public List<ExpanderSoul> expanderSoulList = new List<ExpanderSoul>(); // list of expander totems connected to this SettlementManager
+        public ZDOID myZDOID;
+
+        public List<ExpanderSoul> expanderSoulList = new List<ExpanderSoul>(); // list of Expanders connected to this SettlementManager
 
         public string settlementName
         {
-            get { return myZDO.GetString("settlementName", "Elktown"); }
+            get { return myZDO.GetString("settlementName", "No-Name"); }
             set { myZDO.Set("settlementName", value); }
         }
         public float happiness
@@ -57,12 +58,13 @@ namespace Township
         public SettlementManager( ZDO settleManZDO )
         {
             m_tsManager = TownshipManager.Instance;
+
             Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
             myZDO = settleManZDO;
-            myZDO.m_persistent = false; // debugging, has to be true
             myZDOID = myZDO.m_uid;
 
 
+            Jotunn.Logger.LogDebug("my ExpanderSouls, Assemble");
             foreach (ExpanderSoul expandersoul in ExpanderSoul.AllExpanderSouls)
             {
                 if(expandersoul.isActive)
@@ -72,34 +74,60 @@ namespace Township
             }
             Jotunn.Logger.LogDebug(settlementName + " has loaded " + expanderSoulList.Count() + " Souls");
 
+
             if( expanderSoulList.Count() == 0 )
             {
-                Jotunn.Logger.LogDebug( settlementName + " has loaded no Souls. This SettleMan can't exist. Removing." );
-                myZDO.m_persistent = false;
-                AllSettleMans.Remove(this);
-                //Destroy(this, 0f);
+                Jotunn.Logger.LogWarning( settlementName + " has loaded no Souls. This SettleMan can't exist. Removing." );
+                onDestroy();
             }
 
 
             InvokeRepeating("think", 5f, 5f);
-            centerofSOI = calcCenterofSOI();
-            calcCenterExpander();
+
+            calcCenterExpander(); // also sets the centerofSOI
+
+            myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
+            AllSettleMans.Add(this);
         }
+
 
         // called when creating a new Settlemanager
         public SettlementManager( ExpanderSoul expanderSoul )
         {
-
             m_tsManager = TownshipManager.Instance;
             Jotunn.Logger.LogDebug("Constructing new SettlementManager");
-            myZDO = ZDOMan.instance.CreateNewZDO(Vector3.zero);
+
+
+            Jotunn.Logger.LogDebug("\t creating new ZDO for SettlementManager");
+            myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0, -10000, 0));
             myZDO.m_persistent = true;
             myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode() );
 
 
-            centerofSOI = calcCenterofSOI();
-            calcCenterExpander();
-            InvokeRepeating("think", 5f, 5f);
+            Jotunn.Logger.LogDebug("\t populating new ZDO & stuff");
+            myZDOID = myZDO.m_uid;
+
+            settlementName = "No Name";
+            happiness = 0f;
+            amount_villagers = 0;
+
+            calcCenterExpander(); // also sets the centerofSOI
+
+            Jotunn.Logger.LogDebug("Starting to think");
+            //InvokeRepeating("think", 5f, 5f);
+
+            AllSettleMans.Add(this);
+
+            myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
+            Jotunn.Logger.LogDebug("Done creating new SettleMan");
+        }
+
+
+        // called when invalid or no ExpanderBodies/Souls to sustain it
+        public void onDestroy()
+        {
+            myZDO.m_persistent = false;
+            AllSettleMans.Remove(this);
         }
 
 
@@ -109,10 +137,10 @@ namespace Township
         public void think()
         {
             //  only the server should run this
-            if ( m_tsManager.IsServerorLocal() )
+            if ( TownshipManager.IsServerorLocal() )
             {
-                myZDO.Set("TestNumber", myZDO.GetInt("TestNumber") + 1);
-                Jotunn.Logger.LogDebug(myZDO.GetString("settlementName") + " thinks, therefore it is.");
+                happiness += 1;
+                Jotunn.Logger.LogDebug(settlementName + " thinks, therefore it is.");
             }
         }
 
@@ -140,6 +168,12 @@ namespace Township
         {
             lock(checkconnection_lock) // this is a major operation and nobody should access this file (or expanderList tbf) at this time.
             {
+                if (expanderSoulList.Count() == 0)
+                {
+                    Jotunn.Logger.LogWarning("No point in checking connections if there's no Expanders left");
+                    return;
+                }
+
                 int canidate_range = 2000;
 
                 Jotunn.Logger.LogDebug("checking connections for " + settlementName);
@@ -253,7 +287,8 @@ namespace Township
 
         public void RegisterExpanderSoul( ExpanderSoul newsoul )
         {
-            expanderSoulList.Add(newsoul);
+            if( !expanderSoulList.Contains(newsoul) )
+                expanderSoulList.Add(newsoul);
         }
 
         public void unRegisterExpanderSoul(ExpanderSoul oldsoul)
@@ -261,7 +296,61 @@ namespace Township
             expanderSoulList.Remove(oldsoul);
             if( expanderSoulList.Count() == 0)
             {
-                myZDO.m_persistent = false;
+                onDestroy();
+            }
+        }
+
+        public static SettlementManager registerNewSettlement( ExpanderSoul firstExpanderSoul)
+        {
+            return new SettlementManager(firstExpanderSoul);
+        }
+
+        // 
+        public static bool renameNamedSettlement( string oldname, string newname )
+        {
+            // TODO: make this an RPC call, and only led the admin rename
+
+            foreach(SettlementManager setman in AllSettleMans)
+            {
+                if( setman.settlementName == oldname)
+                {
+                    setman.rename(newname);
+                    Console.instance.Print("renamend settlement " + oldname + " to " + newname);
+                    return true;
+                }
+            }
+
+            Jotunn.Logger.LogDebug("Couldn't find a settlement with the name " + oldname );
+            Console.instance.Print("Couldn't find a settlement with the name " + oldname);
+            return false;
+        }
+
+        // 
+        public static bool renameLocalSettlement(Vector3 pos, string newname)
+        {
+            // TODO: make this an RPC call, and only led the admin rename
+
+            SettlementManager local_setman = TownshipManager.PosInWhichSettlement(pos);
+
+            if ( !(local_setman == null) )
+            {
+                local_setman.rename(newname);
+                Console.instance.Print("renamend local settlement " + local_setman.settlementName + " to " + newname);
+            }
+
+            Jotunn.Logger.LogDebug("You're currently not in the vacinity a settlement");
+            Console.instance.Print("You're currently not in the vacinity a settlement");
+            return false;
+        }
+
+        public void rename(string newname)
+        {
+            Jotunn.Logger.LogDebug("renamend local settlement " + settlementName + " to " + newname);
+            settlementName = newname;
+            // This is dumb, but have to do it for now
+            foreach (ExpanderSoul soul in expanderSoulList)
+            {
+                soul.settlementName = newname;
             }
         }
 

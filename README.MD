@@ -15,7 +15,12 @@ Except your brain goes mushy.
 
 
 TODO:
-	Test what happens when:
-	an ExpanderBody gets unloaded,
-	an ExpanderSoul gets loaded without an ExpanderBody
-	an ExpanderBody gets loaded
+	Fix PosInThisSettlement and PosInWhichSettlement
+
+	Try and connect
+		Generate new settlement when can't connect
+
+	Try and disconnect
+		Make a clean exit
+
+	Test Rename_Local and Rename_Named commands

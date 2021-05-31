@@ -38,9 +38,9 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.8.50";
+        public const string PluginVersion = "0.1.9.25";
         // Phase    - getting basic totems working
-        // Major    - Reworking how everything works
+        // Major    - Rewriting SettlementManager  to take the new system.
         
 
         // Singleton stuff - boy, I hope my teachers don't see this
@@ -52,7 +52,9 @@ namespace Township
 
         public readonly string settlemanangerprefabname = "SettleManager";
         public readonly string expanderprefabname = "ExpanderSoul";
+
         public GameObject expanderGO;
+        public GameObject settleManGO;
 
 
         private void Awake()
@@ -64,6 +66,7 @@ namespace Township
             ItemManager.OnVanillaItemsAvailable += addPieces;
             On.ZNet.Start += OnZNetAvailable;
             loadLocilizations();
+            addCommands();
         }
 
         private void OnZNetAvailable(On.ZNet.orig_Start orig, ZNet self)
@@ -77,25 +80,10 @@ namespace Township
             if (IsServerorLocal())
             {
                 expanderGO = new GameObject(expanderprefabname);
-                //expanderGO.AddComponent<ZNetView>();
+                settleManGO = new GameObject(settlemanangerprefabname);
 
-                //ZNetScene.instance.m_nonNetViewPrefabs.Add( expanderGO );
                 ZNetScene.instance.m_namedPrefabs.Add(expanderprefabname.GetStableHashCode(), expanderGO);
-
-                //Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
-
-                //ZNetScene.m_namedPrefabs.Add(new KeyPair<int, GameObject>(expanderprefabname.GetStableHashCode(), expanderGO)); 
-
-                /*
-                List<ZDO> SettlementManagerZDOs = new List<ZDO>();
-                ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
-
-                foreach (ZDO setmanzdo in SettlementManagerZDOs)
-                {
-                    SettlementManager.AllSettleMans.Add( new SettlementManager(setmanzdo) );
-                }
-                Jotunn.Logger.LogDebug("Done Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan");
-                */
+                ZNetScene.instance.m_namedPrefabs.Add(settlemanangerprefabname.GetStableHashCode(), settleManGO);
 
                 List<ZDO> expanderSoulZDOs = new List<ZDO>();
                 ZDOMan.instance.GetAllZDOsWithPrefab(expanderprefabname, expanderSoulZDOs);
@@ -103,8 +91,21 @@ namespace Township
                 foreach (ZDO expanderZDO in expanderSoulZDOs)
                 {
                     new ExpanderSoul(expanderZDO);
+                    Jotunn.Logger.LogDebug("\n");
                 }
-                Jotunn.Logger.LogDebug("Done Loading " + ExpanderSoul.AllExpanderSouls.Count() + " ExpanderSoul ZDO's from ZDOMan");
+                Jotunn.Logger.LogDebug("Done Loading " + ExpanderSoul.AllExpanderSouls.Count() + " ExpanderSoul ZDO's from ZDOMan\n");
+
+
+                Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
+
+                List<ZDO> SettlementManagerZDOs = new List<ZDO>();
+                ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
+                Jotunn.Logger.LogDebug("Loading " + SettlementManagerZDOs.Count() + " ExpanderSoul ZDO's from ZDOMan");
+                foreach (ZDO setmanzdo in SettlementManagerZDOs)
+                {
+                    SettlementManager.AllSettleMans.Add(new SettlementManager(setmanzdo));
+                }
+                Jotunn.Logger.LogDebug("Done Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan\n");
             }
         }
 
@@ -140,6 +141,9 @@ namespace Township
             CP.PiecePrefab.GetComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_TS_CS";
             CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = CS_buildrange; // 50 or 45 - the range is for the player *not* the piece.
+            // note for later; might set this smaller due to extenders to force/guide them on Expanders
+            // unless I can force them to be placed close to ExpanderBodies and use this for Definers
+            // Will use the marker ring thingy to help players place them in range later
 
             PieceManager.Instance.AddPiece(CP);
             Jotunn.Logger.LogDebug("Added Expander Totem to pieceTable Hammer");
@@ -231,6 +235,13 @@ namespace Township
             });
         }
 
+        public void addCommands()
+        {
+            CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Local_Settlement() );
+            CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Named_Settlement() );
+            CommandManager.Instance.AddConsoleCommand( new Commands.Emergency_Clean_ZDOs() );
+        }
+
     /*
      *  This function is called both when a new SettlementManager is created when a new Heart is placed
      *      AND when a world is loaded
@@ -251,7 +262,7 @@ namespace Township
             SettlementManager.AllSettleMans.Remove(oldSMAI);
         }
 
-        public SettlementManager PosInWhichSettlement(Vector3 pos)
+        public static SettlementManager PosInWhichSettlement(Vector3 pos)
         {
             foreach(SettlementManager settlement in SettlementManager.AllSettleMans)
             {
@@ -265,7 +276,7 @@ namespace Township
             return null; // this is valid, means Pos isn't in a settlement
         }
 
-        public bool IsServerorLocal()
+        public static bool IsServerorLocal()
         {
             return (Jotunn.ZNetExtension.IsLocalInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance)) ;
         }

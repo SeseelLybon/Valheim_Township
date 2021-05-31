@@ -23,15 +23,17 @@ namespace Township
         public static List<ExpanderSoul> AllExpanderSouls = new List<ExpanderSoul>();
 
         public SettlementManager parentSettleMan; // the SettlementManager that is connected to this expander
+        public ZDO parentSettleManZDO; // the SettlementManager that is connected to this expander
 
         public TownshipManager m_tsManager;
 
-        // public GameObject gameObject;
 
         public ZDO myZDO;
         public ZDOID myZDOID;
 
         public ExpanderBody myBody;
+        public ZDO myBodyZDO;
+
 
         public bool isActive
         {
@@ -48,20 +50,25 @@ namespace Township
             get { return myZDO.GetBool("hasSoul"); }
             set { myZDO.Set("hasSoul", value); }
         }
+        public string settlementName
+        {
+            get { return myZDO.GetString("settlementName"); }
+            set { myZDO.Set("settlementName", value); }
+        }
         public Vector3 position
         {
             get { return myZDO.GetVec3("position", Vector3.zero );      }
-            set { myZDO.Set("position", value );   } // if this causes a NRE, then the call itself was bad
+            set { myZDO.Set("position", value );   }
         }
         public ZDOID parentSettleManZDOID
         {
             get { return myZDO.GetZDOID("parentSettleManZDOID"); }
-            set { myZDO.Set("parentSettleManZDOID", value); } // if this causes a NRE, then the call itself was bad
+            set { myZDO.Set("parentSettleManZDOID", value); }
         }
         public ZDOID myBodyZDOID
         {
             get { return myZDO.GetZDOID("myBodyZDOID"); }
-            set { myZDO.Set("myBodyZDOID", value); } // if this causes a NRE, then the call itself was bad
+            set { myZDO.Set("myBodyZDOID", value); }
         }
 
 
@@ -71,10 +78,6 @@ namespace Township
         public ExpanderSoul( ZDO mysoulZDO )
         {
             m_tsManager = TownshipManager.Instance;
-
-            //gameObject = new GameObject( m_tsManager.expanderprefabname );
-            //gameObject.AddComponent<ZNetView>();
-            //gameObject.GetComponent<ZNetView>().m_zdo = mysoulZDO;
 
             Jotunn.Logger.LogDebug("Constructing ExpanderSoul from save.");
             myZDO = mysoulZDO;
@@ -86,9 +89,7 @@ namespace Township
 
             List<ZDO> expanderBodyZDOs = new List<ZDO>();
             ZDOMan.instance.GetAllZDOsWithPrefab("piece_TS_Expander", expanderBodyZDOs);
-
             Jotunn.Logger.LogDebug("Seeing if ExpanderBody is among " + expanderBodyZDOs.Count() + " ExpanderBodyZDO's");
-
             bool stillhasbody = false;
             foreach (ZDO expanderbodyZDO in expanderBodyZDOs)
             {
@@ -97,6 +98,7 @@ namespace Township
                 {
                     Jotunn.Logger.LogDebug("ExpanderSoul still has a body.");
                     stillhasbody = true;
+                    myBodyZDO = expanderbodyZDO;
                     break;
                 }
             }
@@ -106,6 +108,8 @@ namespace Township
                 onDestroyed();
                 return;
             }
+
+            myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
             AllExpanderSouls.Add(this);
         }
 
@@ -114,9 +118,6 @@ namespace Township
         {
             m_tsManager = TownshipManager.Instance;
 
-            //gameObject = new GameObject(m_tsManager.expanderprefabname);
-            //gameObject.AddComponent<ZNetView>();
-
             Jotunn.Logger.LogDebug("Constructing ExpanderSoul from ExpanderBody.");
             myBody = mybody;
 
@@ -124,20 +125,20 @@ namespace Township
             Jotunn.Logger.LogDebug("\t creating new ZDO for ExpanderSoul");
 
             myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0,-10000,0));
-            //myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
             myZDO.SetPrefab( m_tsManager.expanderprefabname.GetStableHashCode() );
 
-            //myZDO.Initialize(ZDOMan.instance);
-
-            myZDO.m_persistent = true;
 
             Jotunn.Logger.LogDebug("\t populating new ZDO");
             isActive = false;
             isConnected = false;
             position = myBody.m_piece.GetCenter();
+            myBodyZDO = myBody.myZDO;
             myBodyZDOID = myBody.myZDOID;
             myBody.mySoulZDOID = myZDOID; // give myBody my ZDOID
 
+            changeActive(isActive);
+
+            myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
             AllExpanderSouls.Add(this);
         }
 
@@ -154,7 +155,8 @@ namespace Township
             }
             AllExpanderSouls.Remove(this);
             myZDO.m_persistent = false;
-            
+            disConnectSettleMan();
+
             //myZDO.Reset();
             //Destroy(this);
         }
@@ -181,11 +183,51 @@ namespace Township
             myBody = mybody;
         }
 
+        public void connectSettleMan( SettlementManager setman, int reason = 0 )
+        {
+            Jotunn.Logger.LogDebug(setman.settlementName + " connecting to ExpanderSoul");
+            setman.RegisterExpanderSoul( this );
+            parentSettleMan = setman;
+            parentSettleManZDO = parentSettleMan.myZDO;
+            parentSettleManZDOID = parentSettleMan.myZDOID;
+            settlementName = parentSettleMan.settlementName;
+            isConnected = true;
+        }
+
+        public void disConnectSettleMan(int reason = 0)
+        {
+            Jotunn.Logger.LogDebug("SettleMan disconnecting to ExpanderSoul (if I wasn't already)");
+            parentSettleMan.unRegisterExpanderSoul( this);
+
+            parentSettleMan = null;
+            parentSettleManZDO = null;
+            // parentSettleManZDOID = null; // can't set ZDOIDD to null
+            settlementName = "None";
+            isConnected = false;
+        }
+
+
+        public void changeActive( bool toactive )
+        {
+            Jotunn.Logger.LogDebug("ExpanderSoul.changeActive: " + toactive);
+            // change whether the Expander can connect and relay connections
+            if (toactive)
+            {   
+                isActive = true;
+                changeConnection(toConnect: true, checkconnections: true); // if I can connect, it'd be nice if I was
+            }
+            else if (!toactive)
+            {   
+                isActive = false;
+                changeConnection(toConnect: false, checkconnections: true); // relinquesh connection when deactivating
+            }
+        }
+
 
 
         public void changeConnection(bool toConnect, bool checkconnections = true)
         {
-            Jotunn.Logger.LogDebug("Changing connections of an Expander; " + toConnect + " " + checkconnections);
+            Jotunn.Logger.LogDebug("ExpanderSoul.changeConnection: " + toConnect + " " + checkconnections);
 
             // TODO: myBody *can* be null
 
@@ -202,13 +244,13 @@ namespace Township
                         parentSettleMan.checkConnectionsWeb();
                 }
 
-                parentSettleMan = null;
-                isConnected = false;
+                disConnectSettleMan();
                 return;
             }
 
             //Change whether the Expander can connect in this moment
             Vector3 curpos = myZDO.GetVec3("position", Vector3.zero);
+            Jotunn.Logger.LogDebug( curpos.ToString() );
 
             if ( curpos == Vector3.zero)
             {
@@ -216,21 +258,24 @@ namespace Township
                 throw new NullReferenceException(); // if myBodyZDO returns a Vector3.zero, the position was not properly set
             }
 
-            SettlementManager tempSetMan = m_tsManager.PosInWhichSettlement( curpos );
+            SettlementManager tempSetMan = TownshipManager.PosInWhichSettlement( curpos );
 
             if ( toConnect && isActive && tempSetMan != null)
             { // if wanting to connect && expander is active && I'm near enough to a settlement
                 Jotunn.Logger.LogDebug("Connecting Expander");
                 tempSetMan.RegisterExpanderSoul( this );
-                parentSettleMan = tempSetMan;
+                connectSettleMan(tempSetMan);
                 isConnected = true;
             }
             else if (tempSetMan == null)
             {   // if not in a village
+                Jotunn.Logger.LogWarning("No nearby or active Settlement found!");
+                Jotunn.Logger.LogWarning("Creating new SettlementManager and connecting to it.");
+                connectSettleMan( SettlementManager.registerNewSettlement(this) );
+
                 // this isn't the place to start a new village
-                Jotunn.Logger.LogDebug("No nearby or active Settlement found!");
-                parentSettleMan = null;
-                isConnected = false;
+                //parentSettleMan = null;
+                //isConnected = false;
             }
             else
             {
