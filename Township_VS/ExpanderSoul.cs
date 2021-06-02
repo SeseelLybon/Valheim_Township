@@ -155,7 +155,7 @@ namespace Township
             }
             AllExpanderSouls.Remove(this);
             myZDO.m_persistent = false;
-            disConnectSettleMan();
+            disConnectSettleMan(unregister:true);
 
             //myZDO.Reset();
             //Destroy(this);
@@ -183,10 +183,11 @@ namespace Township
             myBody = mybody;
         }
 
-        public void connectSettleMan( SettlementManager setman, int reason = 0 )
+        public void connectSettleMan( SettlementManager setman, bool register = true,  int reason = 0 )
         {
             Jotunn.Logger.LogDebug(setman.settlementName + " connecting to ExpanderSoul");
-            setman.RegisterExpanderSoul( this );
+            if(register)
+                setman.RegisterExpanderSoul( this );
             parentSettleMan = setman;
             parentSettleManZDO = parentSettleMan.myZDO;
             parentSettleManZDOID = parentSettleMan.myZDOID;
@@ -194,16 +195,24 @@ namespace Township
             isConnected = true;
         }
 
-        public void disConnectSettleMan(int reason = 0)
+        public void disConnectSettleMan(bool unregister = true, int reason = 0)
         {
-            Jotunn.Logger.LogDebug("SettleMan disconnecting to ExpanderSoul (if I wasn't already)");
-            parentSettleMan.unRegisterExpanderSoul( this);
-
-            parentSettleMan = null;
-            parentSettleManZDO = null;
-            // parentSettleManZDOID = null; // can't set ZDOIDD to null
-            settlementName = "None";
-            isConnected = false;
+            Jotunn.Logger.LogDebug("SettleMan disconnecting from ExpanderSoul (if it wasn't already)");
+            if( !(parentSettleMan is null)  )
+            {
+                Jotunn.Logger.LogDebug("(Was connected) Disconnecting from" + parentSettleMan.settlementName );
+                if (unregister)
+                    parentSettleMan.unRegisterExpanderSoul(this);
+                parentSettleMan = null;
+                parentSettleManZDO = null;
+                // parentSettleManZDOID = null; // can't set ZDOIDD to null
+                settlementName = "None";
+                isConnected = false;
+            }
+            else
+            {
+                Jotunn.Logger.LogDebug("(Wasn't connected)");
+            }
         }
 
 
@@ -236,15 +245,11 @@ namespace Township
                 Jotunn.Logger.LogDebug("Disconnecting Expander (if it wasn't already)");
 
                 // if I have a parentSetMan, unregister
-                if( parentSettleMan != null )
-                {
-                    parentSettleMan.unRegisterExpanderSoul(this);
-                    // Do I want my parent to check his connections?
-                    if (checkconnections && isActive)
-                        parentSettleMan.checkConnectionsWeb();
-                }
+                disConnectSettleMan(unregister:true);
 
-                disConnectSettleMan();
+                if (checkconnections && isActive && (parentSettleMan is null))
+                    parentSettleMan.checkConnectionsWeb();
+
                 return;
             }
 
@@ -258,16 +263,16 @@ namespace Township
                 throw new NullReferenceException(); // if myBodyZDO returns a Vector3.zero, the position was not properly set
             }
 
-            SettlementManager tempSetMan = TownshipManager.PosInWhichSettlement( curpos );
+            SettlementManager tempSetMan = SettlementManager.PosInWhichSettlement( curpos );
 
-            if ( toConnect && isActive && tempSetMan != null)
+            if ( toConnect && isActive && !(tempSetMan is null))
             { // if wanting to connect && expander is active && I'm near enough to a settlement
                 Jotunn.Logger.LogDebug("Connecting Expander");
                 tempSetMan.RegisterExpanderSoul( this );
                 connectSettleMan(tempSetMan);
                 isConnected = true;
             }
-            else if (tempSetMan == null)
+            else if (tempSetMan is null)
             {   // if not in a village
                 Jotunn.Logger.LogWarning("No nearby or active Settlement found!");
                 Jotunn.Logger.LogWarning("Creating new SettlementManager and connecting to it.");
@@ -282,7 +287,7 @@ namespace Township
                 Jotunn.Logger.LogFatal("Expander.changeConnection() had an outcome I didn't expect");
             }
 
-            if (checkconnections && tempSetMan != null)
+            if (checkconnections && !(tempSetMan is null))
             {
                 tempSetMan.checkConnectionsWeb();
             }

@@ -70,7 +70,10 @@ namespace Township
                 if(expandersoul.isActive)
                     if(expandersoul.isConnected)
                         if (expandersoul.parentSettleManZDOID == myZDOID)
-                            expanderSoulList.Add( expandersoul );
+                        {
+                            //expanderSoulList.Add(expandersoul);
+                            expandersoul.connectSettleMan(this, register:true);
+                        }
             }
             Jotunn.Logger.LogDebug(settlementName + " has loaded " + expanderSoulList.Count() + " Souls");
 
@@ -82,7 +85,7 @@ namespace Township
             }
 
 
-            InvokeRepeating("think", 5f, 5f);
+            //InvokeRepeating("think", 5f, 5f);
 
             calcCenterExpander(); // also sets the centerofSOI
 
@@ -107,7 +110,7 @@ namespace Township
             Jotunn.Logger.LogDebug("\t populating new ZDO & stuff");
             myZDOID = myZDO.m_uid;
 
-            settlementName = "No Name";
+            settlementName = "No-Name";
             happiness = 0f;
             amount_villagers = 0;
 
@@ -180,7 +183,7 @@ namespace Township
 
                 calcCenterExpander();
 
-                // list with all the expanders in range that are active
+                // list of all the expanders that will be connected
                 List<ExpanderSoul> new_expanderList = new List<ExpanderSoul>();
 
                 // list of all expanders in a 2000 something range
@@ -219,12 +222,28 @@ namespace Township
                     }
                 }
 
+                List<ExpanderSoul> old_expanderSouls = new List<ExpanderSoul>();
 
+
+                Jotunn.Logger.LogDebug("Gathering old Expanders");
+                foreach (ExpanderSoul expander in expanderSoulList)
+                {
+                    if( new_expanderList.Contains(expander) )
+                    {
+                        continue;
+                    } else
+                    {
+                        old_expanderSouls.Add(expander);
+                    }
+                }
+
+                Jotunn.Logger.LogDebug("Disconnecting old Expanders");
                 // deactivate all the Expanders that aren't in the new list
-                foreach(ExpanderSoul old_expander in expanderSoulList)
+                foreach (ExpanderSoul old_expander in old_expanderSouls)
                 {
                     old_expander.changeConnection(toConnect: false, checkconnections: false);
                 }
+
 
                 Jotunn.Logger.LogDebug("Old: " + expanderSoulList.Count() + "| New: " + new_expanderList.Count());
 
@@ -330,12 +349,13 @@ namespace Township
         {
             // TODO: make this an RPC call, and only led the admin rename
 
-            SettlementManager local_setman = TownshipManager.PosInWhichSettlement(pos);
+            SettlementManager local_setman = SettlementManager.PosInWhichSettlement(pos);
 
-            if ( !(local_setman == null) )
+            if ( !(local_setman is null) )
             {
                 local_setman.rename(newname);
                 Console.instance.Print("renamend local settlement " + local_setman.settlementName + " to " + newname);
+                return true;
             }
 
             Jotunn.Logger.LogDebug("You're currently not in the vacinity a settlement");
@@ -351,7 +371,23 @@ namespace Township
             foreach (ExpanderSoul soul in expanderSoulList)
             {
                 soul.settlementName = newname;
+                return;
             }
+        }
+
+
+        public static SettlementManager PosInWhichSettlement(Vector3 pos)
+        {
+            foreach (SettlementManager settlement in AllSettleMans)
+            {
+                if (settlement.isPosInThisSettlement(pos))
+                {
+                    Jotunn.Logger.LogDebug("Found a settlement at this pos");
+                    return settlement;
+                }
+            }
+            Jotunn.Logger.LogDebug("Did not find a settlement at this pos");
+            return null; // this is valid, means Pos isn't in a settlement
         }
 
 

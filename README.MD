@@ -15,12 +15,5 @@ Except your brain goes mushy.
 
 
 TODO:
-	Fix PosInThisSettlement and PosInWhichSettlement
-
-	Try and connect
-		Generate new settlement when can't connect
-
-	Try and disconnect
-		Make a clean exit
-
-	Test Rename_Local and Rename_Named commands
+	
+        If the connection is severed between two clusters of Expanders, what to do?

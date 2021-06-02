@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.9.25";
+        public const string PluginVersion = "0.1.9.33";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
@@ -91,7 +91,6 @@ namespace Township
                 foreach (ZDO expanderZDO in expanderSoulZDOs)
                 {
                     new ExpanderSoul(expanderZDO);
-                    Jotunn.Logger.LogDebug("\n");
                 }
                 Jotunn.Logger.LogDebug("Done Loading " + ExpanderSoul.AllExpanderSouls.Count() + " ExpanderSoul ZDO's from ZDOMan\n");
 
@@ -100,12 +99,12 @@ namespace Township
 
                 List<ZDO> SettlementManagerZDOs = new List<ZDO>();
                 ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
-                Jotunn.Logger.LogDebug("Loading " + SettlementManagerZDOs.Count() + " ExpanderSoul ZDO's from ZDOMan");
+                Jotunn.Logger.LogDebug("Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan");
                 foreach (ZDO setmanzdo in SettlementManagerZDOs)
                 {
-                    SettlementManager.AllSettleMans.Add(new SettlementManager(setmanzdo));
+                    new SettlementManager(setmanzdo);
                 }
-                Jotunn.Logger.LogDebug("Done Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan\n");
+                Jotunn.Logger.LogDebug("Done Loading " + SettlementManager.AllSettleMans.Count() + " SettleManager ZDO's from ZDOMan\n");
             }
         }
 
@@ -262,23 +261,22 @@ namespace Township
             SettlementManager.AllSettleMans.Remove(oldSMAI);
         }
 
-        public static SettlementManager PosInWhichSettlement(Vector3 pos)
-        {
-            foreach(SettlementManager settlement in SettlementManager.AllSettleMans)
-            {
-                if( settlement.isPosInThisSettlement(pos) )
-                {
-                    return settlement;
-                }
-            }
-
-
-            return null; // this is valid, means Pos isn't in a settlement
-        }
 
         public static bool IsServerorLocal()
         {
-            return (Jotunn.ZNetExtension.IsLocalInstance(ZNet.instance) || Jotunn.ZNetExtension.IsServerInstance(ZNet.instance)) ;
+            return (Jotunn.ZNetExtension.IsServerInstance(ZNet.instance) || Jotunn.ZNetExtension.IsLocalInstance(ZNet.instance));
+        }
+        public static bool IsServer()
+        {
+            return (Jotunn.ZNetExtension.IsServerInstance(ZNet.instance));
+        }
+        public static bool IsLocal()
+        {
+            return (Jotunn.ZNetExtension.IsLocalInstance(ZNet.instance));
+        }
+        public static bool IsClient()
+        {
+            return (Jotunn.ZNetExtension.IsClientInstance(ZNet.instance));
         }
     }
 }

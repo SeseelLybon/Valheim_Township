@@ -231,8 +231,8 @@ namespace Township
                 {
                     m_nview.InvokeRPC(ZNetView.Everybody, "onDestroyed" );
                 }
+                AllExpanderBodies.Remove(this);
             }
-            AllExpanderBodies.Remove(this);
         }
 
         public void RPC_OnDestroyed(long user)
@@ -280,7 +280,8 @@ namespace Township
             Jotunn.Logger.LogDebug("ExpanderBody.Interact()");
             if (!user.IsOwner())
             {
-                return true;
+                Jotunn.Logger.LogDebug("Player isn't the owner");
+                return true; // disabled for testing
             }
             if (hold)
             {
