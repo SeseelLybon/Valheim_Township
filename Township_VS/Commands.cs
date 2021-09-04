@@ -54,5 +54,17 @@ namespace Township
                 Console.instance.Print("not yet implemented");
             }
         }
+
+        class Print_All_Settlements : ConsoleCommand
+        {
+            public override string Name => "Print_All_Settlements";
+
+            public override string Help => "Prints a list with the name and stats of all settlementManagers";
+
+            public override void Run(string[] args)
+            {
+                SettlementManager.printAllSettlements();
+            }
+        }
     }
 }

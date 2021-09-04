@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
@@ -38,7 +37,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.9.33";
+        public const string PluginVersion = "0.1.9.0";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
@@ -59,17 +58,19 @@ namespace Township
 
         private void Awake()
         {
+            Jotunn.Logger.LogWarning("Hello World, from the Township plugin");
 
             Jotunn.Logger.LogWarning("Hello World, from the Township plugin");
 
-
             ItemManager.OnVanillaItemsAvailable += addPieces;
-            On.ZNet.Start += OnZNetAvailable;
+            //On.ZNet.Start += OnZNetAvailable;
+            On.ZNetScene.Awake += ZNetScene_Awake; ;
             loadLocilizations();
             addCommands();
         }
 
-        private void OnZNetAvailable(On.ZNet.orig_Start orig, ZNet self)
+        //private void OnZNetAvailable(On.ZNet.orig_Start orig, ZNet self)
+        private void ZNetScene_Awake(On.ZNetScene.orig_Awake orig, ZNetScene self)
         {
             //TownshipManagerZDOID = "";
 
@@ -79,20 +80,6 @@ namespace Township
 
             if (IsServerorLocal())
             {
-                expanderGO = new GameObject(expanderprefabname);
-                settleManGO = new GameObject(settlemanangerprefabname);
-
-                ZNetScene.instance.m_namedPrefabs.Add(expanderprefabname.GetStableHashCode(), expanderGO);
-                ZNetScene.instance.m_namedPrefabs.Add(settlemanangerprefabname.GetStableHashCode(), settleManGO);
-
-                List<ZDO> expanderSoulZDOs = new List<ZDO>();
-                ZDOMan.instance.GetAllZDOsWithPrefab(expanderprefabname, expanderSoulZDOs);
-                Jotunn.Logger.LogDebug("Loading " + expanderSoulZDOs.Count() + " ExpanderSoul ZDO's from ZDOMan");
-                foreach (ZDO expanderZDO in expanderSoulZDOs)
-                {
-                    new ExpanderSoul(expanderZDO);
-                }
-                Jotunn.Logger.LogDebug("Done Loading " + ExpanderSoul.AllExpanderSouls.Count() + " ExpanderSoul ZDO's from ZDOMan\n");
 
 
                 Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
@@ -106,6 +93,14 @@ namespace Township
                 }
                 Jotunn.Logger.LogDebug("Done Loading " + SettlementManager.AllSettleMans.Count() + " SettleManager ZDO's from ZDOMan\n");
             }
+
+            settleMan_GO = new GameObject(settlemanangerprefabname);
+            ZNetView znetviewTemp = settleMan_GO.AddComponent<ZNetView>();
+            znetviewTemp.m_persistent = true;
+
+            PrefabManager.Instance.AddPrefab(settleMan_GO);
+
+
         }
 
 
@@ -116,11 +111,13 @@ namespace Township
         public readonly int SOI_range = 20; // Sphere of Influence
 
         public CraftingStation TS_CS;
+
+        public GameObject settleMan_GO;
+
         private void addPieces()
         {
 
             CustomPiece CP;
-
 
             ///////////////////////////////// EXPANDERS /////////////////////////////////
 
@@ -134,7 +131,7 @@ namespace Township
                 new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 1 },
             };
 
-            CP.PiecePrefab.AddComponent<ExpanderBody>();
+            CP.PiecePrefab.AddComponent<Expander>();
 
             CP.PiecePrefab.AddComponent<CraftingStation>();
             CP.PiecePrefab.GetComponent<CraftingStation>();
@@ -239,6 +236,7 @@ namespace Township
             CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Local_Settlement() );
             CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Named_Settlement() );
             CommandManager.Instance.AddConsoleCommand( new Commands.Emergency_Clean_ZDOs() );
+            CommandManager.Instance.AddConsoleCommand(new Commands.Print_All_Settlements());
         }
 
     /*

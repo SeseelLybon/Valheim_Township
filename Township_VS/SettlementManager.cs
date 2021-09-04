@@ -18,21 +18,20 @@ using Logger = Jotunn.Logger;
 namespace Township
 {
 
-    // Funfact; the SettlementManager and the Heart are intrisicly connected because I'm lazy. So in the code they're generally one and the same.
-    // The SettlementManager referencing to the manager and Heart referencing to the piece
 
-    class SettlementManager : MonoBehaviour //SettleMan
+    class SettlementManager //SettleMan
     {
 
         public static List<SettlementManager> AllSettleMans = new List<SettlementManager>();
 
 
         private readonly TownshipManager m_tsManager;
+        private readonly ZNetView m_nview;
 
         public ZDO myZDO;
         public ZDOID myZDOID;
 
-        public List<ExpanderSoul> expanderSoulList = new List<ExpanderSoul>(); // list of Expanders connected to this SettlementManager
+        public List<Expander> expanderList = new List<Expander>(); // list of Expanders connected to this SettlementManager
 
         public string settlementName
         {
@@ -51,7 +50,7 @@ namespace Township
         }
 
         public Vector3 centerofSOI;
-        public ExpanderSoul centerExpander;
+        public Expander centerExpander;
 
 
         // called by Townshipmanager on load
@@ -60,12 +59,17 @@ namespace Township
             m_tsManager = TownshipManager.Instance;
 
             Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
-            myZDO = settleManZDO;
+            ZNetView.m_initZDO = settleManZDO;
+            GameObject gameObject = UnityEngine.Object.Instantiate(m_tsManager.settleMan_GO);
+            m_nview = gameObject.GetComponent<ZNetView>();
+            myZDO = m_nview.m_zdo;
+
+
             myZDOID = myZDO.m_uid;
 
 
             Jotunn.Logger.LogDebug("my ExpanderSouls, Assemble");
-            foreach (ExpanderSoul expandersoul in ExpanderSoul.AllExpanderSouls)
+            foreach (Expander expandersoul in Expander.AllExpanders)
             {
                 if(expandersoul.isActive)
                     if(expandersoul.isConnected)
@@ -75,10 +79,10 @@ namespace Township
                             expandersoul.connectSettleMan(this, register:true);
                         }
             }
-            Jotunn.Logger.LogDebug(settlementName + " has loaded " + expanderSoulList.Count() + " Souls");
+            Jotunn.Logger.LogDebug(settlementName + " has loaded " + expanderList.Count() + " Souls");
 
 
-            if( expanderSoulList.Count() == 0 )
+            if( expanderList.Count() == 0 )
             {
                 Jotunn.Logger.LogWarning( settlementName + " has loaded no Souls. This SettleMan can't exist. Removing." );
                 onDestroy();
@@ -89,22 +93,31 @@ namespace Township
 
             calcCenterExpander(); // also sets the centerofSOI
 
-            myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
             AllSettleMans.Add(this);
         }
 
 
         // called when creating a new Settlemanager
-        public SettlementManager( ExpanderSoul expanderSoul )
+        public SettlementManager( Expander expanderSoul )
         {
             m_tsManager = TownshipManager.Instance;
             Jotunn.Logger.LogDebug("Constructing new SettlementManager");
 
 
             Jotunn.Logger.LogDebug("\t creating new ZDO for SettlementManager");
-            myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0, -10000, 0));
+
+            //ZNetView.m_initZDO = settleManZDO;
+            //GameObject gameObject = UnityEngine.Object.Instantiate(m_tsManager.settleMan_GO);
+            //m_nview = gameObject.GetComponent<ZNetView>();
+            //myZDO = m_nview.m_zdo;
+
+            GameObject gameObject = new GameObject(m_tsManager.settlemanangerprefabname);
+            gameObject.transform.position = new Vector3(0, -10000, 0);
+            gameObject.AddComponent<ZNetView>();
+
+            myZDO = gameObject.GetComponent<ZNetView>().m_zdo;
             myZDO.m_persistent = true;
-            myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode() );
+            myZDO.SetPrefab( m_tsManager.settlemanangerprefabname.GetStableHashCode() );
 
 
             Jotunn.Logger.LogDebug("\t populating new ZDO & stuff");
@@ -151,7 +164,7 @@ namespace Township
 
         public bool isPosInThisSettlement( Vector3 pos )
         {
-            foreach( ExpanderSoul expander in expanderSoulList)
+            foreach( Expander expander in expanderList)
             {
                 if ( Vector3.Distance(expander.position, pos) <= 30 )
                 {
@@ -171,7 +184,7 @@ namespace Township
         {
             lock(checkconnection_lock) // this is a major operation and nobody should access this file (or expanderList tbf) at this time.
             {
-                if (expanderSoulList.Count() == 0)
+                if (expanderList.Count() == 0)
                 {
                     Jotunn.Logger.LogWarning("No point in checking connections if there's no Expanders left");
                     return;
@@ -184,15 +197,15 @@ namespace Township
                 calcCenterExpander();
 
                 // list of all the expanders that will be connected
-                List<ExpanderSoul> new_expanderList = new List<ExpanderSoul>();
+                List<Expander> new_expanderList = new List<Expander>();
 
                 // list of all expanders in a 2000 something range
-                List<ExpanderSoul> canidateexpanderList = new List<ExpanderSoul>();
+                List<Expander> canidateexpanderList = new List<Expander>();
 
 
                 // Don't really need to check for Expanders that would be an unreasonable distance way (and not active).
                 // 10 bucks someone files a bug report about this.
-                foreach (ExpanderSoul c_expander in ExpanderSoul.AllExpanderSouls)
+                foreach (Expander c_expander in Expander.AllExpanders)
                 {
                     if (Vector3.Distance(c_expander.position, centerofSOI) <= canidate_range && c_expander.isActive)
                     {
@@ -204,7 +217,7 @@ namespace Township
 
 
                 // the meat of the function
-                foreach (ExpanderSoul n_expander in canidateexpanderList)
+                foreach (Expander n_expander in canidateexpanderList)
                 {
                     if (Vector3.Distance(n_expander.position, centerExpander.position ) <= m_tsManager.connection_range && n_expander.isActive)
                     {
@@ -222,11 +235,11 @@ namespace Township
                     }
                 }
 
-                List<ExpanderSoul> old_expanderSouls = new List<ExpanderSoul>();
+                List<Expander> old_expanderSouls = new List<Expander>();
 
 
                 Jotunn.Logger.LogDebug("Gathering old Expanders");
-                foreach (ExpanderSoul expander in expanderSoulList)
+                foreach (Expander expander in expanderList)
                 {
                     if( new_expanderList.Contains(expander) )
                     {
@@ -239,30 +252,30 @@ namespace Township
 
                 Jotunn.Logger.LogDebug("Disconnecting old Expanders");
                 // deactivate all the Expanders that aren't in the new list
-                foreach (ExpanderSoul old_expander in old_expanderSouls)
+                foreach (Expander old_expander in old_expanderSouls)
                 {
                     old_expander.changeConnection(toConnect: false, checkconnections: false);
                 }
 
 
-                Jotunn.Logger.LogDebug("Old: " + expanderSoulList.Count() + "| New: " + new_expanderList.Count());
+                Jotunn.Logger.LogDebug("Old: " + expanderList.Count() + "| New: " + new_expanderList.Count());
 
-                expanderSoulList.Clear();
-                expanderSoulList.AddRange( new_expanderList );
+                expanderList.Clear();
+                expanderList.AddRange( new_expanderList );
 
-                foreach (ExpanderSoul new_expander in new_expanderList)
+                foreach (Expander new_expander in new_expanderList)
                 {
                     new_expander.changeConnection(toConnect: true, checkconnections: false);
                 }
 
-                Jotunn.Logger.LogDebug("current: " + expanderSoulList.Count() + "| New: " + new_expanderList.Count());
+                Jotunn.Logger.LogDebug("current: " + expanderList.Count() + "| New: " + new_expanderList.Count());
 
             }
         }
 
-        private void checkConnectionsWeb_R(ExpanderSoul c_expander, in List<ExpanderSoul> localexpanderList, ref List<ExpanderSoul> new_expanderList)
+        private void checkConnectionsWeb_R(Expander c_expander, in List<Expander> localexpanderList, ref List<Expander> new_expanderList)
         {
-            foreach (ExpanderSoul n_expander in localexpanderList)
+            foreach (Expander n_expander in localexpanderList)
             {
                 if (Vector3.Distance(n_expander.position, c_expander.position) <= m_tsManager.connection_range && n_expander.isActive) // this time test against c_expander *not* heart/m_piece.center
                 {
@@ -283,7 +296,7 @@ namespace Township
             float shortestDistancefromCOSOI = float.MaxValue;
             calcCenterofSOI();
 
-            foreach (ExpanderSoul expander in expanderSoulList)
+            foreach (Expander expander in expanderList)
             {
                 float distancefromCOSOI = Vector3.Distance(centerofSOI, expander.position);
                 if (distancefromCOSOI <= shortestDistancefromCOSOI)
@@ -296,30 +309,30 @@ namespace Township
         private Vector3 calcCenterofSOI()
         {
             Vector3 temp = Vector3.zero;
-            foreach (ExpanderSoul expander in expanderSoulList)
+            foreach (Expander expander in expanderList)
             {
                 temp += expander.position;
             }
 
-            return temp /= expanderSoulList.Count();
+            return temp /= expanderList.Count();
         }
 
-        public void RegisterExpanderSoul( ExpanderSoul newsoul )
+        public void RegisterExpanderSoul( Expander newsoul )
         {
-            if( !expanderSoulList.Contains(newsoul) )
-                expanderSoulList.Add(newsoul);
+            if( !expanderList.Contains(newsoul) )
+                expanderList.Add(newsoul);
         }
 
-        public void unRegisterExpanderSoul(ExpanderSoul oldsoul)
+        public void unRegisterExpanderSoul(Expander oldsoul)
         {
-            expanderSoulList.Remove(oldsoul);
-            if( expanderSoulList.Count() == 0)
+            expanderList.Remove(oldsoul);
+            if( expanderList.Count() == 0)
             {
                 onDestroy();
             }
         }
 
-        public static SettlementManager registerNewSettlement( ExpanderSoul firstExpanderSoul)
+        public static SettlementManager registerNewSettlement( Expander firstExpanderSoul)
         {
             return new SettlementManager(firstExpanderSoul);
         }
@@ -368,10 +381,18 @@ namespace Township
             Jotunn.Logger.LogDebug("renamend local settlement " + settlementName + " to " + newname);
             settlementName = newname;
             // This is dumb, but have to do it for now
-            foreach (ExpanderSoul soul in expanderSoulList)
+            foreach (Expander soul in expanderList)
             {
                 soul.settlementName = newname;
                 return;
+            }
+        }
+
+        public static void printAllSettlements()
+        {
+            foreach (SettlementManager setman in AllSettleMans)
+            {
+                Console.instance.Print(setman.settlementName + "\n");
             }
         }
 
