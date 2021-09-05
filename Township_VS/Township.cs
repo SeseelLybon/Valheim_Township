@@ -15,6 +15,7 @@ using UnityEngine;
 
 using HarmonyLib;
 
+using Jotunn;
 using Jotunn.Configs;
 using Jotunn.Entities;
 using Jotunn.Managers;
@@ -37,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.9.0";
+        public const string PluginVersion = "0.1.10.0";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
@@ -82,7 +83,8 @@ namespace Township
             {
 
 
-                Jotunn.Logger.LogDebug("Loading SettleManager ZDO's from ZDOMan");
+                Jotunn.Logger.LogDebug("Loading " +settlemanangerprefabname + " ZDO's from ZDOMan");
+                Jotunn.Logger.LogDebug("Hash: " + settlemanangerprefabname.GetStableHashCode());
 
                 List<ZDO> SettlementManagerZDOs = new List<ZDO>();
                 ZDOMan.instance.GetAllZDOsWithPrefab(settlemanangerprefabname, SettlementManagerZDOs);
@@ -92,15 +94,7 @@ namespace Township
                     new SettlementManager(setmanzdo);
                 }
                 Jotunn.Logger.LogDebug("Done Loading " + SettlementManager.AllSettleMans.Count() + " SettleManager ZDO's from ZDOMan\n");
-            }
-
-            settleMan_GO = new GameObject(settlemanangerprefabname);
-            ZNetView znetviewTemp = settleMan_GO.AddComponent<ZNetView>();
-            znetviewTemp.m_persistent = true;
-
-            PrefabManager.Instance.AddPrefab(settleMan_GO);
-
-
+            } 
         }
 
 
@@ -235,7 +229,6 @@ namespace Township
         {
             CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Local_Settlement() );
             CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Named_Settlement() );
-            CommandManager.Instance.AddConsoleCommand( new Commands.Emergency_Clean_ZDOs() );
             CommandManager.Instance.AddConsoleCommand(new Commands.Print_All_Settlements());
         }
 

@@ -43,18 +43,6 @@ namespace Township
             }
         }
 
-        class Emergency_Clean_ZDOs : ConsoleCommand
-        {
-            public override string Name => "Emergency_Clean_ZDOs";
-
-            public override string Help => "ONLY IN EMERGENCIES: deletes all ZDO's currently there.";
-
-            public override void Run(string[] args)
-            {
-                Console.instance.Print("not yet implemented");
-            }
-        }
-
         class Print_All_Settlements : ConsoleCommand
         {
             public override string Name => "Print_All_Settlements";

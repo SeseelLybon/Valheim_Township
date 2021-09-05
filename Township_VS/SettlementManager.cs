@@ -31,6 +31,8 @@ namespace Township
         public ZDO myZDO;
         public ZDOID myZDOID;
 
+        public GameObject gameObject;
+
         public List<Expander> expanderList = new List<Expander>(); // list of Expanders connected to this SettlementManager
 
         public string settlementName
@@ -59,10 +61,9 @@ namespace Township
             m_tsManager = TownshipManager.Instance;
 
             Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
-            ZNetView.m_initZDO = settleManZDO;
-            GameObject gameObject = UnityEngine.Object.Instantiate(m_tsManager.settleMan_GO);
+            GameObject gameObject = UnityEngine.Object.Instantiate( new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
             m_nview = gameObject.GetComponent<ZNetView>();
-            myZDO = m_nview.m_zdo;
+            myZDO = m_nview.GetZDO();
 
 
             myZDOID = myZDO.m_uid;
@@ -111,11 +112,12 @@ namespace Township
             //m_nview = gameObject.GetComponent<ZNetView>();
             //myZDO = m_nview.m_zdo;
 
-            GameObject gameObject = new GameObject(m_tsManager.settlemanangerprefabname);
+            //GameObject gameObject = new GameObject(m_tsManager.settlemanangerprefabname);
+            gameObject = UnityEngine.Object.Instantiate(new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
             gameObject.transform.position = new Vector3(0, -10000, 0);
             gameObject.AddComponent<ZNetView>();
 
-            myZDO = gameObject.GetComponent<ZNetView>().m_zdo;
+            myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
             myZDO.m_persistent = true;
             myZDO.SetPrefab( m_tsManager.settlemanangerprefabname.GetStableHashCode() );
 

@@ -238,10 +238,14 @@ namespace Township
             sb.Append(
                 "\n Active: " + isActive +
                 "\n Connected: " + isConnected +
-                "\n ExpanderBodies: " + AllExpanders.Count() +
-                "\n ExpanderSouls: " + Expander.AllExpanders.Count() +
-                "\n SettlementManagers: " + SettlementManager.AllSettleMans.Count() +
-                "\n Connected Settlement: " + settlementName);
+                "\n Expander: " + AllExpanders.Count() +
+                "\n Settlements: " + SettlementManager.AllSettleMans.Count());
+            if (!(parentSettleMan == null) ){
+                sb.Append(
+                    "\n Settlement name: " + parentSettleMan.settlementName +
+                    "\n Connected Expanders: " + parentSettleMan.expanderList.Count() );
+            }
+                
             return sb.ToString();
         }
         public void onDestroyed()
