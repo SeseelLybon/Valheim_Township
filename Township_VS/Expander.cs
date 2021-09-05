@@ -67,10 +67,20 @@ namespace Township
             get { return myZDO.GetZDOID("parentSettleManZDOID"); }
             set { myZDO.Set("parentSettleManZDOID", value); }
         }
+        public Guid parentSettleManGuid
+        {
+            get { return Guid.ParseExact(myZDO.GetString("parentSettleManGuid"), "D"); }
+            set { myZDO.Set("parentSettleManGuid", value.ToString()); }
+        }
         public ZDOID myZDOID
         {
             get { return myZDO.GetZDOID("myZDOID"); }
             set { myZDO.Set("myZDOID", value); }
+        }
+        public Guid myGuid
+        {
+            get { return Guid.Parse(myZDO.GetString("myGuid")); }
+            set { myZDO.Set("myGuid", value.ToString()); }
         }
 
         bool isPlaced = false;
@@ -107,8 +117,19 @@ namespace Township
 
                     Jotunn.Logger.LogDebug("Expander ZDOID: " + myZDOID);
 
-
                     position = m_piece.GetCenter();
+
+                    if (isConnected)
+                    {
+                        SettlementManager temp = SettlementManager.GetSetManByGuid(parentSettleManGuid);
+                        if(!(temp == null))
+                        {
+                            connectSettleMan(temp, true);
+                        } else
+                        {
+                            disConnectSettleMan(false);
+                        }
+                    }
 
                     // how to register RPC
                     //m_nview.Register<bool>("changeActive", RPC_changeActive);
@@ -243,6 +264,7 @@ namespace Township
             if (!(parentSettleMan == null) ){
                 sb.Append(
                     "\n Settlement name: " + parentSettleMan.settlementName +
+                    "\n Settlement Guid: " + parentSettleMan.myGuid.ToString() +
                     "\n Connected Expanders: " + parentSettleMan.expanderList.Count() );
             }
                 
@@ -270,6 +292,7 @@ namespace Township
             parentSettleMan = setman;
             parentSettleManZDO = parentSettleMan.myZDO;
             parentSettleManZDOID = parentSettleMan.myZDOID;
+            parentSettleManGuid = parentSettleMan.myGuid;
             settlementName = parentSettleMan.settlementName;
             isConnected = true;
         }
@@ -277,21 +300,17 @@ namespace Township
         public void disConnectSettleMan(bool unregister = true, int reason = 0)
         {
             Jotunn.Logger.LogDebug("SettleMan disconnecting from ExpanderSoul (if it wasn't already)");
-            if (!(parentSettleMan is null))
-            {
+            if(!(parentSettleMan == null))
                 Jotunn.Logger.LogDebug("(Was connected) Disconnecting from" + parentSettleMan.settlementName);
-                if (unregister)
-                    parentSettleMan.unRegisterExpanderSoul(this);
-                parentSettleMan = null;
-                parentSettleManZDO = null;
-                // parentSettleManZDOID = null; // can't set ZDOIDD to null
-                settlementName = "None";
-                isConnected = false;
-            }
-            else
-            {
-                Jotunn.Logger.LogDebug("(Wasn't connected)");
-            }
+            if (unregister && !(parentSettleMan == null))
+                parentSettleMan.unRegisterExpanderSoul(this);
+
+            parentSettleMan = null;
+            parentSettleManZDO = null;
+            //parentSettleManGuid = null; // can't set Guid to null
+            //parentSettleManZDOID = null; // can't set ZDOIDD to null
+            settlementName = "None";
+            isConnected = false;
         }
 
 

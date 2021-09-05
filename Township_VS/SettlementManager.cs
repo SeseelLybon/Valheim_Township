@@ -24,7 +24,6 @@ namespace Township
 
         public static List<SettlementManager> AllSettleMans = new List<SettlementManager>();
 
-
         private readonly TownshipManager m_tsManager;
         private readonly ZNetView m_nview;
 
@@ -51,20 +50,33 @@ namespace Township
             set { myZDO.Set("amount_villagers", value); }
         }
 
+        public Guid myGuid
+        {
+            get { return Guid.ParseExact( myZDO.GetString("myGuid"), "D"); }
+            set { myZDO.Set("myGuid", value.ToString() ); }
+        }
+
         public Vector3 centerofSOI;
         public Expander centerExpander;
 
 
-        // called by Townshipmanager on load
+        /// <summary>
+        /// called by Townshipmanager on load
+        /// </summary>
+        /// <param name="settleManZDO"></param>
         public SettlementManager( ZDO settleManZDO )
         {
             m_tsManager = TownshipManager.Instance;
 
             Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
-            GameObject gameObject = UnityEngine.Object.Instantiate( new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
-            m_nview = gameObject.GetComponent<ZNetView>();
-            myZDO = m_nview.GetZDO();
+            //gameObject = UnityEngine.Object.Instantiate( new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
+            //m_nview = gameObject.GetComponent<ZNetView>();
+            //myZDO = m_nview.GetZDO();
+            //myZDO = settleManZDO;
 
+            myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0, -10000, 0));
+            myZDO.m_persistent = true;
+            myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode());
 
             myZDOID = myZDO.m_uid;
 
@@ -98,7 +110,10 @@ namespace Township
         }
 
 
-        // called when creating a new Settlemanager
+        /// <summary>
+        /// called when creating a new Settlemanager
+        /// </summary>
+        /// <param name="expanderSoul"></param>
         public SettlementManager( Expander expanderSoul )
         {
             m_tsManager = TownshipManager.Instance;
@@ -113,18 +128,23 @@ namespace Township
             //myZDO = m_nview.m_zdo;
 
             //GameObject gameObject = new GameObject(m_tsManager.settlemanangerprefabname);
-            gameObject = UnityEngine.Object.Instantiate(new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
-            gameObject.transform.position = new Vector3(0, -10000, 0);
-            gameObject.AddComponent<ZNetView>();
+            //gameObject = UnityEngine.Object.Instantiate(new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
+            //gameObject.transform.position = new Vector3(0, -10000, 0);
+            //gameObject.AddComponent<ZNetView>();
 
-            myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
+            //GameObject gameObject = new GameObject(m_tsManager.settlemanangerprefabname);
+            //myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
+            //myZDO.m_persistent = true;
+            //myZDO.SetPrefab( m_tsManager.settlemanangerprefabname.GetStableHashCode() );
+
+            myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0, -10000, 0));
             myZDO.m_persistent = true;
-            myZDO.SetPrefab( m_tsManager.settlemanangerprefabname.GetStableHashCode() );
+            myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode());
 
 
             Jotunn.Logger.LogDebug("\t populating new ZDO & stuff");
             myZDOID = myZDO.m_uid;
-
+            myGuid = Guid.NewGuid();
             settlementName = "No-Name";
             happiness = 0f;
             amount_villagers = 0;
@@ -136,7 +156,6 @@ namespace Township
 
             AllSettleMans.Add(this);
 
-            myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
             Jotunn.Logger.LogDebug("Done creating new SettleMan");
         }
 
@@ -150,8 +169,6 @@ namespace Township
 
 
 
-        /*
-         */
         public void think()
         {
             //  only the server should run this
@@ -411,6 +428,51 @@ namespace Township
             }
             Jotunn.Logger.LogDebug("Did not find a settlement at this pos");
             return null; // this is valid, means Pos isn't in a settlement
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="setmanname"></param>
+        /// <returns></returns>
+        public static SettlementManager GetSetManByName(string setmanname)
+        {
+            foreach(SettlementManager setman in AllSettleMans)
+            {
+                if (setman.settlementName == setmanname)
+                    return setman;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="setmanZDOID"></param>
+        /// <returns></returns>
+        public static SettlementManager GetSetManByZDOID(ZDOID setmanZDOID)
+        {
+            foreach (SettlementManager setman in AllSettleMans)
+            {
+                if (setman.myZDOID == setmanZDOID)
+                    return setman;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="setmanZDOID"></param>
+        /// <returns></returns>
+        public static SettlementManager GetSetManByGuid( Guid setmanguid )
+        {
+            foreach (SettlementManager setman in AllSettleMans)
+            {
+                if (setman.myGuid == setmanguid)
+                    return setman;
+            }
+            return null;
         }
 
 
