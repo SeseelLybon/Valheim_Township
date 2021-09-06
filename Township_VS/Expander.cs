@@ -35,53 +35,13 @@ namespace Township
         public static List<Expander> AllExpanders = new List<Expander>();
 
         public ZDO myZDO;
+        public ZDOID myID;
 
-
-        public bool isActive
-        {
-            get { return myZDO.GetBool("isActive"); }
-            set { myZDO.Set("isActive", value); }
-        }
-        public bool isConnected
-        {
-            get { return myZDO.GetBool("isConnected"); }
-            set { myZDO.Set("isConnected", value); }
-        }
-        public bool hasSoul
-        {
-            get { return myZDO.GetBool("hasSoul"); }
-            set { myZDO.Set("hasSoul", value); }
-        }
-        public string settlementName
-        {
-            get { return myZDO.GetString("settlementName"); }
-            set { myZDO.Set("settlementName", value); }
-        }
-        public Vector3 position
-        {
-            get { return myZDO.GetVec3("position", Vector3.zero); }
-            set { myZDO.Set("position", value); }
-        }
-        public ZDOID parentSettleManZDOID
-        {
-            get { return myZDO.GetZDOID("parentSettleManZDOID"); }
-            set { myZDO.Set("parentSettleManZDOID", value); }
-        }
-        public Guid parentSettleManGuid
-        {
-            get { return Guid.ParseExact(myZDO.GetString("parentSettleManGuid"), "D"); }
-            set { myZDO.Set("parentSettleManGuid", value.ToString("D")); }
-        }
-        public ZDOID myZDOID
-        {
-            get { return myZDO.GetZDOID("myZDOID"); }
-            set { myZDO.Set("myZDOID", value); }
-        }
-        public Guid myGuid
-        {
-            get { return Guid.ParseExact(myZDO.GetString("myGuid", Guid.NewGuid().ToString("D")), "D"); }
-            set { myZDO.Set("myGuid", value.ToString("D")); }
-        }
+        public const string isActive = "isActive";
+        public const string isConnected = "isConnected";
+        public const string settlementName = "settlementName";
+        public const string position = "position";
+        public const string parentSettleManID = "parentSettleManID";
 
         bool isPlaced = false;
 
@@ -108,20 +68,20 @@ namespace Township
 
                     AllExpanders.Add(this);
                     myZDO = m_nview.GetZDO();
-                    myZDOID = myZDO.m_uid;
+                    myID = myZDO.m_uid;
 
                     m_nview.Register<bool>("changeActive", RPC_changeActive);
                     m_nview.Register<bool, bool>("changeConnection", RPC_changeConnection);
                     m_nview.Register("onDestroy", RPC_OnDestroy);
                     m_nview.Register("onDestroyed", RPC_OnDestroyed);
 
-                    Jotunn.Logger.LogDebug("Expander ZDOID: " + myZDOID);
+                    Jotunn.Logger.LogDebug("Expander ZDOID: " + myID);
 
-                    position = m_piece.GetCenter();
+                    myZDO.Set("position", m_piece.GetCenter() );
 
-                    if (isConnected)
+                    if (myZDO.GetBool(isConnected))
                     {
-                        SettlementManager temp = SettlementManager.GetSetManByGuid(parentSettleManGuid);
+                        SettlementManager temp = SettlementManager.GetSetManByZDOID( myZDO.GetZDOID(parentSettleManID) );
                         if(!(temp == null))
                         {
                             connectSettleMan(temp, true);
@@ -138,6 +98,29 @@ namespace Township
 
                     myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
                     Jotunn.Logger.LogDebug("Done doing stuff to ExpanderBody\n");
+                }
+            }
+        }
+
+        int updateinterval = 1; //seconds
+        float updatenextTime = 0;
+        public void Update()
+        {
+            if(isPlaced && myZDO.GetBool(isActive))
+            {
+                if (Time.time >= updatenextTime)
+                {
+                    if (myZDO.GetBool(isConnected) && parentSettleMan == null)
+                    {
+                        foreach (SettlementManager settleman in SettlementManager.AllSettleMans)
+                        {
+                            if (settleman.myZDOID == myZDO.GetZDOID(parentSettleManID))
+                            {
+                                connectSettleMan(settleman, true);
+                            }
+                        }
+                    }
+                    updatenextTime += updateinterval;
                 }
             }
         }
@@ -236,7 +219,7 @@ namespace Township
             }
             if (!hold)
             {   // this works as a toggle
-                m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", !isActive);
+                m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", !myZDO.GetBool("isActive"));
                 return true;
             }
 
@@ -264,8 +247,8 @@ namespace Township
             if (!(parentSettleMan == null) ){
                 sb.Append(
                     "\n Settlement name: " + parentSettleMan.settlementName +
-                    "\n Settlement Guid: " + parentSettleMan.myGuid +
-                    "\n Connected Expanders: " + parentSettleMan.expanderList.Count() );
+                    "\n Settlement Guid: " + parentSettleMan.myZDOID +
+                    "\n Connected Expanders: " + parentSettleMan.GetRegisteredExpanders().Count() );
             }
                 
             return sb.ToString();
@@ -275,7 +258,7 @@ namespace Township
             Jotunn.Logger.LogDebug("An Expader Soul is being destroyed because its body no longer availabe");
             if (parentSettleMan != null)
             {
-                parentSettleMan.unRegisterExpanderSoul(this);
+                parentSettleMan.unRegisterExpanderSoul(this.myID);
             }
             AllExpanders.Remove(this);
             myZDO.m_persistent = false;
@@ -284,33 +267,43 @@ namespace Township
             //myZDO.Reset();
             //Destroy(this);
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="setman"></param>
+        /// <param name="register"></param>
+        /// <param name="reason"></param>
         public void connectSettleMan(SettlementManager setman, bool register = true, int reason = 0)
         {
             Jotunn.Logger.LogDebug(setman.settlementName + " connecting to ExpanderSoul");
             if (register)
-                setman.RegisterExpanderSoul(this);
+                setman.RegisterExpanderSoul(this.myID);
             parentSettleMan = setman;
             parentSettleManZDO = parentSettleMan.myZDO;
-            parentSettleManZDOID = parentSettleMan.myZDOID;
-            parentSettleManGuid = parentSettleMan.myGuid;
-            settlementName = parentSettleMan.settlementName;
-            isConnected = true;
+            myZDO.Set(parentSettleManID, parentSettleMan.myZDOID);
+            myZDO.Set(settlementName, parentSettleMan.settlementName);
+            myZDO.Set(isConnected, true);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="unregister"></param>
+        /// <param name="reason"></param>
         public void disConnectSettleMan(bool unregister = true, int reason = 0)
         {
             Jotunn.Logger.LogDebug("SettleMan disconnecting from ExpanderSoul (if it wasn't already)");
             if(!(parentSettleMan == null))
                 Jotunn.Logger.LogDebug("(Was connected) Disconnecting from" + parentSettleMan.settlementName);
             if (unregister && !(parentSettleMan == null))
-                parentSettleMan.unRegisterExpanderSoul(this);
+                parentSettleMan.unRegisterExpanderSoul(this.myID);
 
             parentSettleMan = null;
             parentSettleManZDO = null;
-            //parentSettleManGuid = null; // can't set Guid to null
-            //parentSettleManZDOID = null; // can't set ZDOIDD to null
-            settlementName = "None";
-            isConnected = false;
+            myZDO.Set(parentSettleManID, ZDOID.None);
+            myZDO.GetString(settlementName, "None");
+            myZDO.Set(isConnected, false);
         }
 
 
@@ -320,12 +313,12 @@ namespace Township
             // change whether the Expander can connect and relay connections
             if (toactive)
             {
-                isActive = true;
+                myZDO.Set("isActive", true );
                 changeConnection(toConnect: true, checkconnections: true); // if I can connect, it'd be nice if I was
             }
             else if (!toactive)
             {
-                isActive = false;
+                myZDO.Set("isActive", false);
                 changeConnection(toConnect: false, checkconnections: true); // relinquesh connection when deactivating
             }
         }
@@ -345,14 +338,14 @@ namespace Township
                 // if I have a parentSetMan, unregister
                 disConnectSettleMan(unregister: true);
 
-                if (checkconnections && isActive && (parentSettleMan is null))
+                if (checkconnections && myZDO.GetBool("isActive") && (parentSettleMan is null))
                     parentSettleMan.checkConnectionsWeb();
 
                 return;
             }
 
             //Change whether the Expander can connect in this moment
-            Vector3 curpos = position;
+            Vector3 curpos = myZDO.GetVec3(position, Vector3.zero);
             Jotunn.Logger.LogDebug(curpos.ToString());
 
             if (curpos == Vector3.zero)
@@ -363,12 +356,12 @@ namespace Township
 
             SettlementManager tempSetMan = SettlementManager.PosInWhichSettlement(curpos);
 
-            if (toConnect && isActive && !(tempSetMan is null))
+            if (toConnect && myZDO.GetBool("isActive") && !(tempSetMan is null))
             { // if wanting to connect && expander is active && I'm near enough to a settlement
                 Jotunn.Logger.LogDebug("Connecting Expander");
-                tempSetMan.RegisterExpanderSoul(this);
+                tempSetMan.RegisterExpanderSoul(this.myID);
                 connectSettleMan(tempSetMan);
-                isConnected = true;
+                myZDO.Set(isConnected, true);
             }
             else if (tempSetMan is null)
             {   // if not in a village
@@ -389,6 +382,11 @@ namespace Township
             {
                 tempSetMan.checkConnectionsWeb();
             }
+        }
+
+        public static ZDO GetZDO(ZDOID zdoid)
+        {
+            return ZDOMan.instance.GetZDO(zdoid);
         }
     }
 }

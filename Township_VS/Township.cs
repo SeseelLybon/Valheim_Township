@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.10.0";
+        public const string PluginVersion = "0.1.11.0";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
