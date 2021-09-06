@@ -52,8 +52,8 @@ namespace Township
 
         public Guid myGuid
         {
-            get { return Guid.ParseExact( myZDO.GetString("myGuid"), "D"); }
-            set { myZDO.Set("myGuid", value.ToString() ); }
+            get { return Guid.ParseExact( myZDO.GetString("myGuid", Guid.NewGuid().ToString("D")), "D"); }
+            set { myZDO.Set("myGuid", value.ToString("D") ); }
         }
 
         public Vector3 centerofSOI;
@@ -69,14 +69,8 @@ namespace Township
             m_tsManager = TownshipManager.Instance;
 
             Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
-            //gameObject = UnityEngine.Object.Instantiate( new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
-            //m_nview = gameObject.GetComponent<ZNetView>();
-            //myZDO = m_nview.GetZDO();
-            //myZDO = settleManZDO;
-
-            myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0, -10000, 0));
-            myZDO.m_persistent = true;
-            myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode());
+            gameObject = UnityEngine.Object.Instantiate(new GameObject(m_tsManager.settlemanangerprefabname, new Type[] { typeof(ZNetView) }));
+            myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
 
             myZDOID = myZDO.m_uid;
 
@@ -98,7 +92,11 @@ namespace Township
             if( expanderList.Count() == 0 )
             {
                 Jotunn.Logger.LogWarning( settlementName + " has loaded no Souls. This SettleMan can't exist. Removing." );
-                onDestroy();
+                myZDO.m_persistent = false;
+                return;
+            } else
+            {
+                myZDO.m_persistent = true;
             }
 
 
@@ -121,25 +119,9 @@ namespace Township
 
 
             Jotunn.Logger.LogDebug("\t creating new ZDO for SettlementManager");
-
-            //ZNetView.m_initZDO = settleManZDO;
-            //GameObject gameObject = UnityEngine.Object.Instantiate(m_tsManager.settleMan_GO);
-            //m_nview = gameObject.GetComponent<ZNetView>();
-            //myZDO = m_nview.m_zdo;
-
-            //GameObject gameObject = new GameObject(m_tsManager.settlemanangerprefabname);
-            //gameObject = UnityEngine.Object.Instantiate(new GameObject("SettleManager:", new Type[] { typeof(ZNetView) }));
-            //gameObject.transform.position = new Vector3(0, -10000, 0);
-            //gameObject.AddComponent<ZNetView>();
-
-            //GameObject gameObject = new GameObject(m_tsManager.settlemanangerprefabname);
-            //myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
-            //myZDO.m_persistent = true;
-            //myZDO.SetPrefab( m_tsManager.settlemanangerprefabname.GetStableHashCode() );
-
-            myZDO = ZDOMan.instance.CreateNewZDO(new Vector3(0, -10000, 0));
+            gameObject = UnityEngine.Object.Instantiate(new GameObject(m_tsManager.settlemanangerprefabname, new Type[] { typeof(ZNetView) }));
+            myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
             myZDO.m_persistent = true;
-            myZDO.SetPrefab(m_tsManager.settlemanangerprefabname.GetStableHashCode());
 
 
             Jotunn.Logger.LogDebug("\t populating new ZDO & stuff");
@@ -164,7 +146,7 @@ namespace Township
         public void onDestroy()
         {
             myZDO.m_persistent = false;
-            AllSettleMans.Remove(this);
+            //SettlementManager.AllSettleMans.Remove(this);
         }
 
 
@@ -413,6 +395,9 @@ namespace Township
             {
                 Console.instance.Print(setman.settlementName + "\n");
             }
+            List<ZDO> SettlementManagerZDOs = new List<ZDO>();
+            ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.Instance.settlemanangerprefabname, SettlementManagerZDOs);
+            Console.instance.Print("Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan");
         }
 
 

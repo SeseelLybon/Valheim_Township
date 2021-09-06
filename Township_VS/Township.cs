@@ -65,14 +65,15 @@ namespace Township
 
             ItemManager.OnVanillaItemsAvailable += addPieces;
             //On.ZNet.Start += OnZNetAvailable;
-            On.ZNetScene.Awake += ZNetScene_Awake; ;
+            On.ZNetScene.Update += ZNetScene_Update;
             loadLocilizations();
             addCommands();
         }
 
         //private void OnZNetAvailable(On.ZNet.orig_Start orig, ZNet self)
-        private void ZNetScene_Awake(On.ZNetScene.orig_Awake orig, ZNetScene self)
+        private void ZNetScene_Update(On.ZNetScene.orig_Update orig, ZNetScene self)
         {
+            On.ZNetScene.Update -= ZNetScene_Update;
             //TownshipManagerZDOID = "";
 
             //TownshipManagerZDO = ZDOMan.instance.GetZDO(TownshipManagerZDOID);

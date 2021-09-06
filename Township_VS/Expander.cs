@@ -70,7 +70,7 @@ namespace Township
         public Guid parentSettleManGuid
         {
             get { return Guid.ParseExact(myZDO.GetString("parentSettleManGuid"), "D"); }
-            set { myZDO.Set("parentSettleManGuid", value.ToString()); }
+            set { myZDO.Set("parentSettleManGuid", value.ToString("D")); }
         }
         public ZDOID myZDOID
         {
@@ -79,8 +79,8 @@ namespace Township
         }
         public Guid myGuid
         {
-            get { return Guid.Parse(myZDO.GetString("myGuid")); }
-            set { myZDO.Set("myGuid", value.ToString()); }
+            get { return Guid.ParseExact(myZDO.GetString("myGuid", Guid.NewGuid().ToString("D")), "D"); }
+            set { myZDO.Set("myGuid", value.ToString("D")); }
         }
 
         bool isPlaced = false;
@@ -264,7 +264,7 @@ namespace Township
             if (!(parentSettleMan == null) ){
                 sb.Append(
                     "\n Settlement name: " + parentSettleMan.settlementName +
-                    "\n Settlement Guid: " + parentSettleMan.myGuid.ToString() +
+                    "\n Settlement Guid: " + parentSettleMan.myGuid +
                     "\n Connected Expanders: " + parentSettleMan.expanderList.Count() );
             }
                 
