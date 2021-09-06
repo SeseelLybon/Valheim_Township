@@ -43,15 +43,15 @@ namespace Township
             }
         }
 
-        class Emergency_Clean_ZDOs : ConsoleCommand
+        class Print_All_Settlements : ConsoleCommand
         {
-            public override string Name => "Emergency_Clean_ZDOs";
+            public override string Name => "Print_All_Settlements";
 
-            public override string Help => "ONLY IN EMERGENCIES: deletes all ZDO's currently there.";
+            public override string Help => "Prints a list with the name and stats of all settlementManagers";
 
             public override void Run(string[] args)
             {
-                Console.instance.Print("not yet implemented");
+                SettlementManager.printAllSettlements();
             }
         }
     }
