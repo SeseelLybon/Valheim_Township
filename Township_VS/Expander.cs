@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
-
+using HarmonyLib;
 
 using Jotunn.Configs;
 using Jotunn.Entities;
@@ -45,6 +45,10 @@ namespace Township
 
         bool isPlaced = false;
 
+        public GameObject workbenchProxy;
+        public GameObject stonecutterProxy;
+        public GameObject forgeProxy;
+        public GameObject artisanProxy;
 
 
         public void Start()
@@ -58,6 +62,9 @@ namespace Township
 
             if (m_piece.IsPlacedByPlayer())
             {
+                populateproxycraftingstations();
+
+
                 isPlaced = true;
                 Jotunn.Logger.LogDebug("ExpanderBody is placed by player");
                 if (TownshipManager.IsServerorLocal())
@@ -72,8 +79,8 @@ namespace Township
 
                     m_nview.Register<bool>("changeActive", RPC_changeActive);
                     m_nview.Register<bool, bool>("changeConnection", RPC_changeConnection);
-                    m_nview.Register("onDestroy", RPC_OnDestroy);
-                    m_nview.Register("onDestroyed", RPC_OnDestroyed);
+                    //m_nview.Register("onDestroy", RPC_OnDestroy);
+                    //m_nview.Register("onDestroyed", RPC_OnDestroyed);
 
                     Jotunn.Logger.LogDebug("Expander ZDOID: " + myID);
 
@@ -99,7 +106,95 @@ namespace Township
                     myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
                     Jotunn.Logger.LogDebug("Done doing stuff to ExpanderBody\n");
                 }
+
+                if (myZDO.GetBool(isConnected))
+                {
+                }
             }
+        }
+
+        /// <summary>
+        /// This is a *terrible* way of grabbing them all.
+        /// </summary>
+        private void findNearbyWorkbenches()
+        {
+            var pos = myZDO.GetVec3(position, Vector3.zero);
+
+            List<ZDO> CS_ZDOs = new List<ZDO>();
+            ZDOMan.instance.GetAllZDOsWithPrefab("piece_workbench", CS_ZDOs);
+            foreach(ZDO zdo in CS_ZDOs)
+            {
+                Jotunn.Logger.LogWarning("found workbench zdo's: " + CS_ZDOs.Count() );
+                if(zdo.m_distant == false)
+                {
+                    if( Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange){
+                        parentSettleMan.enableCraftinStationProxy("$piece_workbench", zdo.m_uid);
+                    }
+                }
+            }
+
+            CS_ZDOs.Clear();
+            ZDOMan.instance.GetAllZDOsWithPrefab("forge", CS_ZDOs);
+            foreach (ZDO zdo in CS_ZDOs)
+            {
+                Jotunn.Logger.LogWarning("found forge zdo's: " + CS_ZDOs.Count());
+                if (zdo.m_distant == false)
+                {
+                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange)
+                    {
+                        parentSettleMan.enableCraftinStationProxy("$piece_forge", zdo.m_uid);
+                    }
+                }
+            }
+
+            CS_ZDOs.Clear();
+            ZDOMan.instance.GetAllZDOsWithPrefab("piece_stonecutter", CS_ZDOs);
+            foreach (ZDO zdo in CS_ZDOs)
+            {
+                if (zdo.m_distant == false)
+                {
+                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange)
+                    {
+                        parentSettleMan.enableCraftinStationProxy("$piece_stonecutter", zdo.m_uid);
+                    }
+                }
+            }
+
+            CS_ZDOs.Clear();
+            ZDOMan.instance.GetAllZDOsWithPrefab("piece_artisanstation", CS_ZDOs);
+            foreach (ZDO zdo in CS_ZDOs)
+            {
+                if (zdo.m_distant == false)
+                {
+                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange)
+                    {
+                        parentSettleMan.enableCraftinStationProxy("$piece_artisanstation", zdo.m_uid);
+                    }
+                }
+            }
+        }
+
+        private void populateproxycraftingstations()
+        {
+            workbenchProxy = new GameObject();
+            workbenchProxy.transform.position = m_piece.GetCenter();
+            var wbPcs = workbenchProxy.AddComponent<CraftingStation>();
+            wbPcs.m_name = "$piece_workbench";
+
+            forgeProxy = new GameObject();
+            forgeProxy.transform.position = m_piece.GetCenter();
+            var fPcs = forgeProxy.AddComponent<CraftingStation>();
+            fPcs.m_name = "$piece_forge";
+
+            stonecutterProxy = new GameObject();
+            stonecutterProxy.transform.position = m_piece.GetCenter();
+            var stPcs = stonecutterProxy.AddComponent<CraftingStation>();
+            stPcs.m_name = "$piece_stonecutter";
+
+            artisanProxy = new GameObject();
+            artisanProxy.transform.position = m_piece.GetCenter();
+            var atPcs = artisanProxy.AddComponent<CraftingStation>();
+            atPcs.m_name = "$piece_artisanstation";
         }
 
         int updateinterval = 1; //seconds
@@ -146,14 +241,7 @@ namespace Township
             // Do some stuff to the body
             if (m_nview.IsOwner())
             {
-                if (toactive)
-                {
-                    GetComponent<CraftingStation>().m_rangeBuild = 10;
-                }
-                else
-                {
-                    GetComponent<CraftingStation>().m_rangeBuild = 0;
-                }
+
             }
         }
 
@@ -169,37 +257,34 @@ namespace Township
             if (m_piece.IsPlacedByPlayer())
             {
                 Jotunn.Logger.LogDebug("ExpanderBody.OnDestroyed()");
-                if (m_nview.IsOwner())
-                {
-                    m_nview.InvokeRPC(ZNetView.Everybody, "onDestroyed");
-                }
                 AllExpanders.Remove(this);
+                if (myZDO.GetBool(isConnected))
+                {
+                    //changeConnection(false, true);
+                    var oldParentsettlement = SettlementManager.GetSetManByZDOID(myZDO.GetZDOID(parentSettleManID));
+                    oldParentsettlement.loadedExpanders.Remove(this);
+                    oldParentsettlement.unRegisterExpanderSoul(myID);
+                }
             }
         }
 
-        public void RPC_OnDestroyed(long user)
-        {
-        }
-
-        // Called when the object is destroyed, either by unloading or anything
+        /// <summary>
+        /// Called when the object is destroyed by unloading
+        /// See OnDestroyed for when the object is destroyed by damage/deconstructed
+        /// </summary>
         public void OnDestroy()
         {
             Jotunn.Logger.LogDebug("ExpanderBody.OnDestroy()");
-            /*
-            if( true )//m_piece.IsPlacedByPlayer() ) // can't call these objects because they're already gone.
-                if ( true) //m_nview.IsOwner() )
-                    if(mySoul != null)
-                        m_nview.InvokeRPC(ZNetView.Everybody, "onDestroy");
-            */
+
             if (isPlaced)
             {
                 AllExpanders.Remove(this);
+                if (myZDO.GetBool(isConnected))
+                {
+                    SettlementManager.GetSetManByZDOID(myZDO.GetZDOID(parentSettleManID)).loadedExpanders.Remove(this);
+                    //parentSettleMan.loadedExpanders.Remove(this);
+                }
             }
-        }
-
-        public void RPC_OnDestroy(long user)
-        {
-
         }
 
         /* Function is now only for making active or not.
@@ -247,25 +332,15 @@ namespace Township
             if (!(parentSettleMan == null) ){
                 sb.Append(
                     "\n Settlement name: " + parentSettleMan.settlementName +
-                    "\n Settlement Guid: " + parentSettleMan.myZDOID +
-                    "\n Connected Expanders: " + parentSettleMan.GetRegisteredExpanders().Count() );
+                    "\n Settlement ID: " + parentSettleMan.myZDOID +
+                    "\n Connected Expanders: " + parentSettleMan.GetRegisteredExpanders().Count() +
+                    "\n Workbenches: " + parentSettleMan.amountWorkbenches + "-" + parentSettleMan.hasWorkbench +
+                    "\n Forges: " + parentSettleMan.amountForges + "-" + parentSettleMan.hasForge +
+                    "\n Stonecutters: " + parentSettleMan.amountStonecutters + "-" + parentSettleMan.hasStonecutter +
+                    "\n Artisan stations: " + parentSettleMan.amountArtisanStations + "-" + parentSettleMan.hasArtisanStation );
             }
                 
             return sb.ToString();
-        }
-        public void onDestroyed()
-        {
-            Jotunn.Logger.LogDebug("An Expader Soul is being destroyed because its body no longer availabe");
-            if (parentSettleMan != null)
-            {
-                parentSettleMan.unRegisterExpanderSoul(this.myID);
-            }
-            AllExpanders.Remove(this);
-            myZDO.m_persistent = false;
-            disConnectSettleMan(unregister: true);
-
-            //myZDO.Reset();
-            //Destroy(this);
         }
 
         /// <summary>
@@ -279,11 +354,16 @@ namespace Township
             Jotunn.Logger.LogDebug(setman.settlementName + " connecting to ExpanderSoul");
             if (register)
                 setman.RegisterExpanderSoul(this.myID);
+
             parentSettleMan = setman;
             parentSettleManZDO = parentSettleMan.myZDO;
             myZDO.Set(parentSettleManID, parentSettleMan.myZDOID);
             myZDO.Set(settlementName, parentSettleMan.settlementName);
             myZDO.Set(isConnected, true);
+            parentSettleMan.loadedExpanders.Add(this);
+
+            findNearbyWorkbenches();
+            changeProxyWorkbenches();
         }
 
         /// <summary>
@@ -299,11 +379,13 @@ namespace Township
             if (unregister && !(parentSettleMan == null))
                 parentSettleMan.unRegisterExpanderSoul(this.myID);
 
+            parentSettleMan.loadedExpanders.Remove(this);
             parentSettleMan = null;
             parentSettleManZDO = null;
             myZDO.Set(parentSettleManID, ZDOID.None);
             myZDO.GetString(settlementName, "None");
             myZDO.Set(isConnected, false);
+            changeProxyWorkbenches();
         }
 
 
@@ -321,6 +403,7 @@ namespace Township
                 myZDO.Set("isActive", false);
                 changeConnection(toConnect: false, checkconnections: true); // relinquesh connection when deactivating
             }
+            changeProxyWorkbenches();
         }
 
 
@@ -334,13 +417,11 @@ namespace Township
             if (!toConnect)
             {   // if wanting to disconnect
                 Jotunn.Logger.LogDebug("Disconnecting Expander (if it wasn't already)");
-
-                // if I have a parentSetMan, unregister
+                var tempPSM = parentSettleMan;
                 disConnectSettleMan(unregister: true);
-
+                // if I have a parentSetMan, unregister
                 if (checkconnections && myZDO.GetBool("isActive") && (parentSettleMan is null))
-                    parentSettleMan.checkConnectionsWeb();
-
+                    tempPSM.checkConnectionsWeb();
                 return;
             }
 
@@ -388,5 +469,41 @@ namespace Township
         {
             return ZDOMan.instance.GetZDO(zdoid);
         }
+
+        /// <summary>
+        /// Tests for each workbench if the settlement will provide and set range
+        /// else set range for all to 0;
+        /// </summary>
+        public void changeProxyWorkbenches()
+        {
+            if (myZDO.GetBool(isConnected))
+            {
+                // TODO: replace townshipinstance thing with config thing
+                if (parentSettleMan.hasWorkbench)
+                    workbenchProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                else
+                    workbenchProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
+
+                if (parentSettleMan.hasForge)
+                    forgeProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                else
+                    forgeProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
+
+                if (parentSettleMan.hasStonecutter)
+                    stonecutterProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                else
+                    stonecutterProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
+
+                if (parentSettleMan.hasArtisanStation)
+                    artisanProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                else
+                    artisanProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
+            }
+        }
+
+
+
     }
+    
+
 }

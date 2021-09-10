@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.11.0";
+        public const string PluginVersion = "0.1.11.20";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
@@ -66,8 +66,47 @@ namespace Township
             ItemManager.OnVanillaItemsAvailable += addPieces;
             //On.ZNet.Start += OnZNetAvailable;
             On.ZNetScene.Update += ZNetScene_Update;
+            On.CraftingStation.Start += CraftingStation_Start;
+            //On.CraftingStation.OnDestroy += CraftingStation_OnDestroy;
+            //On.Piece.OnDestroy += Piece_OnDestroy;
+            On.Piece.DropResources += Piece_DropResources;
             loadLocilizations();
             addCommands();
+        }
+
+
+        private void CraftingStation_Start(On.CraftingStation.orig_Start orig, CraftingStation self)
+        {
+            orig(self);
+            if(self.m_nview != null && self.m_nview.GetZDO() != null)
+            {
+                var isinsettlement = SettlementManager.PosInWhichSettlement(self.m_nview.GetZDO().m_position);
+                if (isinsettlement != null)
+                {
+                    isinsettlement.enableCraftinStationProxy(self.m_name, self.m_nview.GetZDO().m_uid);
+                }
+            }
+        }
+
+
+        private void Piece_DropResources(On.Piece.orig_DropResources orig, Piece self)
+        //private void Piece_OnDestroy(On.Piece.orig_OnDestroy orig, Piece self)
+        //private void CraftingStation_OnDestroy(On.CraftingStation.orig_OnDestroy orig, CraftingStation self)
+        {
+            orig(self);
+
+            CraftingStation tempCS;
+            self.TryGetComponent<CraftingStation>(out tempCS);
+            if (tempCS != null)
+            {
+                // only destroy if the object is destroyed, not when unloaded
+                var isinsettlement = SettlementManager.PosInWhichSettlement(self.m_nview.GetZDO().m_position);
+                if (isinsettlement != null)
+                {
+                    Jotunn.Logger.LogDebug("Removing Craftingstation (hopefully)");
+                    isinsettlement.disableCraftinStationProxy(self.m_name, self.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+                }
+            }
         }
 
         //private void OnZNetAvailable(On.ZNet.orig_Start orig, ZNet self)
@@ -114,6 +153,7 @@ namespace Township
 
             CustomPiece CP;
 
+
             ///////////////////////////////// EXPANDERS /////////////////////////////////
 
             // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
@@ -121,17 +161,17 @@ namespace Township
             CP.Piece.m_name = "$piece_TS_Expander";
             CP.Piece.m_description = "$piece_TS_Expander_desc";
             CP.Piece.m_craftingStation = PrefabManager.Cache.GetPrefab<CraftingStation>("piece_workbench");
+
             CP.Piece.m_resources = new Piece.Requirement[]{
                 new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Stone"), m_amount = 1 },
                 new Piece.Requirement() { m_resItem = PrefabManager.Cache.GetPrefab<ItemDrop>("Wood"), m_amount = 1 },
             };
 
             CP.PiecePrefab.AddComponent<Expander>();
-
-            CP.PiecePrefab.AddComponent<CraftingStation>();
-            CP.PiecePrefab.GetComponent<CraftingStation>();
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_TS_CS";
-            CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = CS_buildrange; // 50 or 45 - the range is for the player *not* the piece.
+            //CP.PiecePrefab.AddComponent<CraftingStation>();
+            //CP.PiecePrefab.GetComponent<CraftingStation>();
+            //CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_TS_CS";
+            //CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = CS_buildrange; // 50 or 45 - the range is for the player *not* the piece.
             // note for later; might set this smaller due to extenders to force/guide them on Expanders
             // unless I can force them to be placed close to ExpanderBodies and use this for Definers
             // Will use the marker ring thingy to help players place them in range later
@@ -143,7 +183,7 @@ namespace Township
 
             ///////////////////////////////// EXTENDERS /////////////////////////////////
 
-
+            /*
             // todo; for the asset; something like the banner and a "banner of the forge" to attach to a Extender/Heart that'd be a pillar object thing
             CP = new CustomPiece("piece_TS_Extender_Workbench", "piece_banner01", "Hammer");
             CP.Piece.m_name = "$piece_TS_Extender_Workbench";
@@ -193,9 +233,9 @@ namespace Township
             CP.PiecePrefab.GetComponent<CraftingStation>().m_name = "$piece_artisanstation";
             CP.PiecePrefab.GetComponent<CraftingStation>().m_rangeBuild = Extender_buildrange;
             PieceManager.Instance.AddPiece(CP);
-            
 
             Jotunn.Logger.LogDebug("Added Extender Totems to pieceTable Hammer");
+            */
 
             ItemManager.OnVanillaItemsAvailable -= addPieces;
         }

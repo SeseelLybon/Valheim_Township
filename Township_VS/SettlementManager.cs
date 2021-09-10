@@ -22,6 +22,8 @@ namespace Township
         public const string RegisteredExpandersIDs = "RegisteredExpandersIDs";
 
         public static List<SettlementManager> AllSettleMans = new List<SettlementManager>();
+        public List<Expander> loadedExpanders = new List<Expander>();
+        public HashSet<ZDOID> craftingstationIDset = new HashSet<ZDOID>();
 
         private readonly TownshipManager m_tsManager;
         //private readonly ZNetView m_nview;
@@ -52,6 +54,47 @@ namespace Township
         {
             get { return myZDO.GetVec3("centerofSOI", Vector3.zero ); }
             set { myZDO.Set("centerofSOI", value); }
+        }
+
+        public bool hasWorkbench
+        {
+            get { return myZDO.GetBool("hasWorkbench", false); }
+            set { myZDO.Set("hasWorkbench", value); }
+        }
+        public int amountWorkbenches
+        {
+            get { return myZDO.GetInt("amountWorkbenches"); }
+            set { myZDO.Set("amountWorkbenches", value); }
+        }
+        public bool hasForge
+        {
+            get { return myZDO.GetBool("hasForge", false); }
+            set { myZDO.Set("hasForge", value); }
+        }
+        public int amountForges
+        {
+            get { return myZDO.GetInt("amountForges"); }
+            set { myZDO.Set("amountForges", value); }
+        }
+        public bool hasStonecutter
+        {
+            get { return myZDO.GetBool("hasStonecutter", false); }
+            set { myZDO.Set("hasStonecutter", value); }
+        }
+        public int amountStonecutters
+        {
+            get { return myZDO.GetInt("amountStonecutters"); }
+            set { myZDO.Set("amountStonecutters", value); }
+        }
+        public bool hasArtisanStation
+        {
+            get { return myZDO.GetBool("hasArtisanStation", false); }
+            set { myZDO.Set("hasArtisanStation", value); }
+        }
+        public int amountArtisanStations
+        {
+            get { return myZDO.GetInt("amountArtisanStations"); }
+            set { myZDO.Set("amountArtisanStations", value); }
         }
 
         public ZDOID centerExpanderID;
@@ -120,8 +163,9 @@ namespace Township
         // called when invalid or no ExpanderBodies/Souls to sustain it
         public void onDestroy()
         {
-            myZDO.m_persistent = false;
-            //SettlementManager.AllSettleMans.Remove(this);
+            ZDOMan.instance.DestroyZDO(myZDO);
+            AllSettleMans.Remove(this);
+            // destroy(this);
         }
 
 
@@ -144,8 +188,7 @@ namespace Township
 
             foreach (ZDOID expanderID in registeredexpanders)
             {
-                ZDO expanderZDO = ZDOMan.instance.GetZDO(expanderID);
-                if ( Vector3.Distance(expanderZDO.GetVec3(Expander.position, Vector3.zero), pos) <= 30 )
+                if ( Vector3.Distance(GetZDO(expanderID).GetVec3(Expander.position, Vector3.zero), pos) <= 30 )
                 {
                     return true;
                 }
@@ -276,6 +319,10 @@ namespace Township
 
         public void calcCenterExpander()
         {
+            //bugged
+            ZDOIDSet registeredexpanders = GetRegisteredExpanders();
+            centerExpanderID = registeredexpanders.First<ZDOID>();
+            /*
             float shortestDistancefromCOSOI = float.MaxValue;
             calcCenterofSOI();
 
@@ -289,10 +336,15 @@ namespace Township
                     centerExpanderID = expander;
                 }
             }
+            */
         }
 
         private Vector3 calcCenterofSOI()
         {
+            //bugged
+            ZDOIDSet registeredexpanders = GetRegisteredExpanders();
+            return GetZDO(registeredexpanders.First<ZDOID>()).GetVec3(Expander.position, Vector3.zero);
+            /*
             ZDOIDSet registeredexpanders = GetRegisteredExpanders();
 
             Vector3 temp = Vector3.zero;
@@ -303,6 +355,7 @@ namespace Township
             }
 
             return temp /= registeredexpanders.Count();
+            */
         }
 
         public void RegisterExpanderSoul( ZDOID newsoulID )
@@ -407,13 +460,13 @@ namespace Township
 
             if ( !(local_setman is null) )
             {
-                local_setman.rename(newname);
                 Console.instance.Print("renamend local settlement " + local_setman.settlementName + " to " + newname);
+                local_setman.rename(newname);
                 return true;
             }
 
-            Jotunn.Logger.LogDebug("You're currently not in the vacinity a settlement");
             Console.instance.Print("You're currently not in the vacinity a settlement");
+            Jotunn.Logger.LogDebug("You're currently not in the vacinity a settlement");
             return false;
         }
 
@@ -492,6 +545,86 @@ namespace Township
             return ZDOMan.instance.GetZDO(zdoid);
         }
 
+        public void enableCraftinStationProxy(string craftingstation, ZDOID CSID)
+        {
+            Jotunn.Logger.LogDebug(settlementName + ": enabling Workbenchproxy " + craftingstation);
+
+            if (!craftingstationIDset.Add(CSID))
+                return;
+            
+
+            if (craftingstation == "$piece_workbench")
+            {
+                amountWorkbenches += 1;
+                hasWorkbench = true;
+            }
+            else if (craftingstation == "$piece_forge")
+            {
+                amountForges += 1;
+                hasForge = true;
+            }
+            else if (craftingstation == "$piece_stonecutter")
+            {
+                amountStonecutters += 1;
+                hasStonecutter = true;
+            }
+            else if (craftingstation == "$piece_artisanstation")
+            {
+                amountArtisanStations += 1;
+                hasArtisanStation = true;
+            }
+
+            foreach(Expander expander in loadedExpanders)
+            {
+                expander.changeProxyWorkbenches();
+            }
+        }
+
+        public void disableCraftinStationProxy(string craftingstation, ZDOID CSID)
+        {
+            Jotunn.Logger.LogDebug(settlementName + ": disabling Workbenchproxy " + craftingstation);
+
+            if (!craftingstationIDset.Remove(CSID))
+                return;
+
+            if (craftingstation == "$piece_workbench")
+            {
+                if (amountWorkbenches >= 1)
+                    amountWorkbenches -= 1;
+
+                if (amountWorkbenches <= 0)
+                    hasWorkbench = false;
+            }
+            else if (craftingstation == "$piece_forge")
+            {
+                if (amountForges >= 1)
+                    amountForges -= 1;
+
+                if (amountForges <= 0)
+                    hasForge = false;
+            }
+            else if (craftingstation == "$piece_stonecutter")
+            {
+                if (amountStonecutters >= 1)
+                    amountStonecutters -= 1;
+
+                if (amountStonecutters <= 0)
+                    hasStonecutter = false;
+            }
+            else if (craftingstation == "$piece_artisanstation")
+            {
+                if ( amountArtisanStations >= 1)
+                    amountArtisanStations -= 1;
+
+                if (amountArtisanStations <= 0)
+                    hasArtisanStation = false;
+            }
+
+            foreach (Expander expander in loadedExpanders)
+            {
+                expander.changeProxyWorkbenches();
+            }
+        }
 
         /*
          * is it even possible to keep a list of objects that extend from Definer?
