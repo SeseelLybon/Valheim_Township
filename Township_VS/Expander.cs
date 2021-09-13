@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using UnityEngine;
-using HarmonyLib;
 
 using Jotunn.Configs;
 using Jotunn.Entities;
@@ -42,6 +41,7 @@ namespace Township
         public const string settlementName = "settlementName";
         public const string position = "position";
         public const string parentSettleManID = "parentSettleManID";
+        public const string showOnMinimap = "showOnMinimap";
 
         bool isPlaced = false;
 
@@ -106,10 +106,6 @@ namespace Township
                     myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
                     Jotunn.Logger.LogDebug("Done doing stuff to ExpanderBody\n");
                 }
-
-                if (myZDO.GetBool(isConnected))
-                {
-                }
             }
         }
 
@@ -121,10 +117,10 @@ namespace Township
             var pos = myZDO.GetVec3(position, Vector3.zero);
 
             List<ZDO> CS_ZDOs = new List<ZDO>();
-            ZDOMan.instance.GetAllZDOsWithPrefab("piece_workbench", CS_ZDOs);
+            //ZDOMan.instance.GetAllZDOsWithPrefab("piece_workbench", CS_ZDOs);
             foreach(ZDO zdo in CS_ZDOs)
             {
-                Jotunn.Logger.LogWarning("found workbench zdo's: " + CS_ZDOs.Count() );
+                //Jotunn.Logger.LogWarning("found workbench zdo's: " + CS_ZDOs.Count() );
                 if(zdo.m_distant == false)
                 {
                     if( Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange){
@@ -201,9 +197,9 @@ namespace Township
         float updatenextTime = 0;
         public void Update()
         {
-            if(isPlaced && myZDO.GetBool(isActive))
+            if (Time.time >= updatenextTime)
             {
-                if (Time.time >= updatenextTime)
+                if (isPlaced && myZDO.GetBool(isActive))
                 {
                     if (myZDO.GetBool(isConnected) && parentSettleMan == null)
                     {
@@ -215,8 +211,8 @@ namespace Township
                             }
                         }
                     }
-                    updatenextTime += updateinterval;
                 }
+                updatenextTime += updateinterval;
             }
         }
 
@@ -279,9 +275,9 @@ namespace Township
             if (isPlaced)
             {
                 AllExpanders.Remove(this);
-                if (myZDO.GetBool(isConnected))
+                if (parentSettleMan != null)
                 {
-                    SettlementManager.GetSetManByZDOID(myZDO.GetZDOID(parentSettleManID)).loadedExpanders.Remove(this);
+                    parentSettleMan.loadedExpanders.Remove(this);
                     //parentSettleMan.loadedExpanders.Remove(this);
                 }
             }

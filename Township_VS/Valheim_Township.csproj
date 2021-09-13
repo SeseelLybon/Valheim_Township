@@ -248,6 +248,7 @@
     <Compile Include="Definer.cs" />
     <Compile Include="Definer_Sub.cs" />
     <Compile Include="Expander.cs" />
+    <Compile Include="Minimap_Extension.cs" />
     <Compile Include="SettlementManager.cs" />
     <Compile Include="Extender.cs" />
     <Compile Include="Properties\IgnoreAccessModifiers.cs" />

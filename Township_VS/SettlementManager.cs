@@ -96,6 +96,21 @@ namespace Township
             get { return myZDO.GetInt("amountArtisanStations"); }
             set { myZDO.Set("amountArtisanStations", value); }
         }
+        public bool showExtenderOnMinimap
+        {
+            get { return myZDO.GetBool("showExtenderOnMinimap", false); }
+            set { myZDO.Set("showExtenderOnMinimap", value); }
+        }
+        public const string CshowOnMinimap = "showOnMinimap";
+        public bool showOnMinimap
+        {
+            get { return myZDO.GetBool(CshowOnMinimap, false); }
+            set { myZDO.Set(CshowOnMinimap, value); }
+        }
+
+
+        public static List<string> settlementnames = new List<string>();
+
 
         public ZDOID centerExpanderID;
 
@@ -107,13 +122,15 @@ namespace Township
         {
             m_tsManager = TownshipManager.Instance;
 
-            Jotunn.Logger.LogDebug("Constructing SettlementManager on load");
+            Jotunn.Logger.LogDebug("Constructing SettlementManager " + settlementName + " on load");
             //gameObject = UnityEngine.Object.Instantiate(new GameObject(m_tsManager.settlemanangerprefabname, new Type[] { typeof(ZNetView) }));
             //myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
             myZDO = settleManZDO;
 
             myZDOID = myZDO.m_uid;
 
+
+            settlementnames.Add(settlementName);
             //InvokeRepeating("think", 5f, 5f);
 
             calcCenterExpander(); // also sets the centerofSOI
@@ -132,16 +149,29 @@ namespace Township
             m_tsManager = TownshipManager.Instance;
             Jotunn.Logger.LogDebug("Constructing new SettlementManager");
 
-
+            
             Jotunn.Logger.LogDebug("\t creating new ZDO for SettlementManager");
             gameObject = UnityEngine.Object.Instantiate(new GameObject(m_tsManager.settlemanangerprefabname, new Type[] { typeof(ZNetView) }));
             myZDO = gameObject.GetComponent<ZNetView>().GetZDO();
             myZDO.m_persistent = true;
 
+            // generate a unique name
+            var uniquethingy = settlementnames.Count();
+            var newname = "No-Name_" + uniquethingy;
+            while (true)
+            {
+                if (!settlementnames.Contains(newname))
+                {
+                    settlementnames.Add(newname);
+                    break;
+                }
+                uniquethingy += 1;
+                newname = "No-Name_" + uniquethingy;
+            }
 
             Jotunn.Logger.LogDebug("\t populating new ZDO & stuff");
             myZDOID = myZDO.m_uid;
-            settlementName = "No-Name";
+            settlementName = newname;
             happiness = 0f;
             amount_villagers = 0;
 
@@ -320,6 +350,7 @@ namespace Township
         public void calcCenterExpander()
         {
             //bugged
+            calcCenterofSOI();
             ZDOIDSet registeredexpanders = GetRegisteredExpanders();
             centerExpanderID = registeredexpanders.First<ZDOID>();
             /*
@@ -339,23 +370,21 @@ namespace Township
             */
         }
 
-        private Vector3 calcCenterofSOI()
+        private void calcCenterofSOI()
         {
             //bugged
-            ZDOIDSet registeredexpanders = GetRegisteredExpanders();
-            return GetZDO(registeredexpanders.First<ZDOID>()).GetVec3(Expander.position, Vector3.zero);
-            /*
+            //ZDOIDSet registeredexpanders = GetRegisteredExpanders();
+            //return GetZDO(registeredexpanders.First<ZDOID>()).GetVec3(Expander.position, Vector3.zero); 
+
             ZDOIDSet registeredexpanders = GetRegisteredExpanders();
 
             Vector3 temp = Vector3.zero;
             foreach (ZDOID expanderID in registeredexpanders)
             {
                 temp += GetZDO(expanderID).GetVec3(Expander.position, Vector3.zero);
-                // note Vector3 shouldn't be called. It'd mean that it wasn't set and isn't the issue here.
+                // note Vector3.zero shouldn't be called. It'd mean that it wasn't set and isn't the issue here.
             }
-
-            return temp /= registeredexpanders.Count();
-            */
+            centerofSOI = temp / registeredexpanders.Count();
         }
 
         public void RegisterExpanderSoul( ZDOID newsoulID )
@@ -472,7 +501,15 @@ namespace Township
 
         public void rename(string newname)
         {
-            Jotunn.Logger.LogDebug("renamend local settlement " + settlementName + " to " + newname);
+            Jotunn.Logger.LogDebug("renaming local settlement " + settlementName + " to " + newname);
+
+            if (settlementnames.Contains(newname))
+            {
+                Jotunn.Logger.LogWarning(newname + " alread exists");
+                Console.instance.Print(newname + " alread exists");
+                return;
+            }
+
             settlementName = newname;
             // This is dumb, but have to do it for now
             ZDOIDSet registeredexpanders = GetRegisteredExpanders();
@@ -482,6 +519,34 @@ namespace Township
                 ZDO expanderZDO = ZDOMan.instance.GetZDO(expanderID);
                 expanderZDO.Set(Expander.settlementName, newname);
             }
+        }
+
+        public static bool ShowSettlementOnMinimapByName(string settlementname)
+        {
+            SettlementManager local_setman = SettlementManager.GetSetManByName(settlementname);
+
+            local_setman.showOnMinimap = true;
+
+            ZDOIDSet registeredexpanders = local_setman.GetRegisteredExpanders();
+            foreach(ZDOID regExp in registeredexpanders)
+            {
+                ZDOMan.instance.GetZDO(regExp).Set(Expander.showOnMinimap, true);
+            }
+            return true;
+        }
+
+        public static bool HideSettlementOnMinimapByName(string settlementname)
+        {
+            SettlementManager local_setman = SettlementManager.GetSetManByName(settlementname);
+
+            local_setman.showOnMinimap = false;
+
+            ZDOIDSet registeredexpanders = local_setman.GetRegisteredExpanders();
+            foreach (ZDOID regExp in registeredexpanders)
+            {
+                ZDOMan.instance.GetZDO(regExp).Set(Expander.showOnMinimap, false);
+            }
+            return true;
         }
 
         public static void printAllSettlements()

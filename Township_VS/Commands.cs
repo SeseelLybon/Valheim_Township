@@ -28,6 +28,7 @@ namespace Township
             public override void Run(string[] args)
             {
                 SettlementManager.renameLocalSettlement( Player.m_localPlayer.transform.position, args[0]);
+                Jotunn.Logger.LogDebug("Ran command");
             }
         }
 
@@ -40,6 +41,7 @@ namespace Township
             public override void Run(string[] args)
             {
                 SettlementManager.renameNamedSettlement( args[0], args[1] );
+                Jotunn.Logger.LogDebug("Ran command");
             }
         }
 
@@ -52,6 +54,55 @@ namespace Township
             public override void Run(string[] args)
             {
                 SettlementManager.printAllSettlements();
+                Jotunn.Logger.LogDebug("Ran command");
+            }
+        }
+
+        class ShowAllExpandersOnMinimap : ConsoleCommand
+        {
+            public override string Name => "ShowAllExpandersOnMinimap";
+
+            public override string Help => "show all expanders on minimap (DEBUG)";
+
+            public override void Run(string[] args)
+            {
+                Minimap_Extension.Instance.ShowAllExpanders();
+                Jotunn.Logger.LogDebug("Ran command");
+            }
+        }
+
+        class HideAllExpandersOnMinimap : ConsoleCommand
+        {
+            public override string Name => "HideAllExpandersOnMinimap";
+
+            public override string Help => "Hide all expanders on minimap (DEBUG)";
+
+            public override void Run(string[] args)
+            {
+                Minimap_Extension.Instance.HideAllExpanders();
+                Jotunn.Logger.LogDebug("Ran command");
+            }
+        }
+
+        class ShowSettlementOnMinimapByName : ConsoleCommand
+        {
+            public override string Name => "ShowSettlementOnMinimapByName";
+            public override string Help => "Shows a settlement's label and expander's area's on the minimap (DEBUG)";
+            public override void Run(string[] args)
+            {
+                SettlementManager.ShowSettlementOnMinimapByName( args[0] );
+                Jotunn.Logger.LogDebug("Ran command");
+            }
+        }
+
+        class HideSettlementOnMinimapByName : ConsoleCommand
+        {
+            public override string Name => "HideSettlementOnMinimapByName";
+            public override string Help => "Shows a settlement's label and expander's area's on the minimap (DEBUG)";
+            public override void Run(string[] args)
+            {
+                SettlementManager.HideSettlementOnMinimapByName( args[0] );
+                Jotunn.Logger.LogDebug("Ran command");
             }
         }
     }

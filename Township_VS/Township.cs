@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.11.20";
+        public const string PluginVersion = "0.1.12.15";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
@@ -46,12 +46,12 @@ namespace Township
         // Singleton stuff - boy, I hope my teachers don't see this
         // sourced from https://csharpindepth.com/articles/singleton#lock
         private TownshipManager() { }
-        private static Lazy<TownshipManager> instance = new Lazy<TownshipManager>(() => new TownshipManager());
+        private static readonly Lazy<TownshipManager> instance = new Lazy<TownshipManager>(() => new TownshipManager());
         public static TownshipManager Instance { get { return instance.Value; } }
 
 
         public readonly string settlemanangerprefabname = "SettleManager";
-        public readonly string expanderprefabname = "ExpanderSoul";
+        public readonly string expanderprefabname = "Expander";
 
         public GameObject expanderGO;
         public GameObject settleManGO;
@@ -67,9 +67,10 @@ namespace Township
             //On.ZNet.Start += OnZNetAvailable;
             On.ZNetScene.Update += ZNetScene_Update;
             On.CraftingStation.Start += CraftingStation_Start;
-            //On.CraftingStation.OnDestroy += CraftingStation_OnDestroy;
-            //On.Piece.OnDestroy += Piece_OnDestroy;
             On.Piece.DropResources += Piece_DropResources;
+
+            var minimapextensioninstance = Minimap_Extension.Instance;
+
             loadLocilizations();
             addCommands();
         }
@@ -157,7 +158,7 @@ namespace Township
             ///////////////////////////////// EXPANDERS /////////////////////////////////
 
             // Just duplicate the ward for now, too lazy to deal with mocks and assents atm
-            CP = new CustomPiece("piece_TS_Expander", "stone_pillar", "Hammer");
+            CP = new CustomPiece(expanderprefabname, "stone_pillar", "Hammer");
             CP.Piece.m_name = "$piece_TS_Expander";
             CP.Piece.m_description = "$piece_TS_Expander_desc";
             CP.Piece.m_craftingStation = PrefabManager.Cache.GetPrefab<CraftingStation>("piece_workbench");
@@ -268,9 +269,14 @@ namespace Township
 
         public void addCommands()
         {
-            CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Local_Settlement() );
-            CommandManager.Instance.AddConsoleCommand( new Commands.Rename_Named_Settlement() );
-            CommandManager.Instance.AddConsoleCommand(new Commands.Print_All_Settlements());
+            var ComManInst = CommandManager.Instance;
+            ComManInst.AddConsoleCommand( new Commands.Rename_Local_Settlement() );
+            ComManInst.AddConsoleCommand( new Commands.Rename_Named_Settlement() );
+            ComManInst.AddConsoleCommand(new Commands.Print_All_Settlements());
+            ComManInst.AddConsoleCommand(new Commands.ShowAllExpandersOnMinimap());
+            ComManInst.AddConsoleCommand(new Commands.HideAllExpandersOnMinimap());
+            ComManInst.AddConsoleCommand(new Commands.ShowSettlementOnMinimapByName());
+            ComManInst.AddConsoleCommand(new Commands.HideSettlementOnMinimapByName());
         }
 
     /*
