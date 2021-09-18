@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.12.25";
+        public const string PluginVersion = "0.1.12.28";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
@@ -67,6 +67,7 @@ namespace Township
 
             patch.CraftingStation_patch.init();
             patch.Minimap_patch.init();
+            patch.Ward_patch.init();
 
             loadLocilizations();
             addCommands();
@@ -238,29 +239,29 @@ namespace Township
             var ComManInst = CommandManager.Instance;
             ComManInst.AddConsoleCommand( new Commands.Rename_Local_Settlement() );
             ComManInst.AddConsoleCommand( new Commands.Rename_Named_Settlement() );
-            ComManInst.AddConsoleCommand(new Commands.Print_All_Settlements());
-            ComManInst.AddConsoleCommand(new Commands.ShowAllExpandersOnMinimap());
-            ComManInst.AddConsoleCommand(new Commands.HideAllExpandersOnMinimap());
-            ComManInst.AddConsoleCommand(new Commands.ShowSettlementOnMinimapByName());
-            ComManInst.AddConsoleCommand(new Commands.HideSettlementOnMinimapByName());
+            ComManInst.AddConsoleCommand( new Commands.Print_All_Settlements() );
+            ComManInst.AddConsoleCommand( new Commands.ShowAllExpandersOnMinimap() );
+            ComManInst.AddConsoleCommand( new Commands.HideAllExpandersOnMinimap() );
+            ComManInst.AddConsoleCommand( new Commands.ShowSettlementOnMinimapByName() );
+            ComManInst.AddConsoleCommand( new Commands.HideSettlementOnMinimapByName() );
         }
 
     /*
      *  This function is called both when a new SettlementManager is created when a new Heart is placed
      *      AND when a world is loaded
      */
-    public void registerSMAI( SettlementManager newSMAI )
+    public static void registerSMAI( SettlementManager newSMAI )
         {
-            Jotunn.Logger.LogInfo("Registering new SettlementManager " + newSMAI.settlementName );
+            Jotunn.Logger.LogInfo("Registering new SettlementManager " + newSMAI.myZDO.GetString(SettlementManager.settlementName));
             SettlementManager.AllSettleMans.Add(newSMAI);
         }
 
         /*
          *  This function is called when a Heart totem is destroyed
          */
-        public void unregisterSMAI( SettlementManager oldSMAI )
+        public static void unregisterSMAI( SettlementManager oldSMAI )
         {
-            Jotunn.Logger.LogInfo("Unregistering new SettlementManager " + oldSMAI.settlementName);
+            Jotunn.Logger.LogInfo("Unregistering new SettlementManager " + oldSMAI.myZDO.GetString( SettlementManager.settlementName ) );
             // ping all totems of this SettlementManager that thair parentSMAI is long longer there :'(
             SettlementManager.AllSettleMans.Remove(oldSMAI);
         }

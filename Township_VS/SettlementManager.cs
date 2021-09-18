@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,13 +19,10 @@ namespace Township
 {
     class SettlementManager //SettleMan
     {
-        public const string RegisteredExpandersIDs = "RegisteredExpandersIDs";
-        public const string RegisteredcraftingstationIDs = "craftingstationIDs";
-        public const string RegisteredwardIDs = "wardIDs";
 
         public static List<SettlementManager> AllSettleMans = new List<SettlementManager>();
         public List<Expander> loadedExpanders = new List<Expander>();
-        //public HashSet<ZDOID> craftingstationIDset = new HashSet<ZDOID>();
+        public static List<string> settlementnames = new List<string>();
 
         private readonly TownshipManager m_tsManager;
 
@@ -33,18 +30,14 @@ namespace Township
         public ZDOID myZDOID;
 
         public GameObject gameObject;
+        public ZDOID centerExpanderID;
 
-
-        public string settlementName
-        {
-            get { return myZDO.GetString("settlementName", "No-Name"); }
-            set { myZDO.Set("settlementName", value); }
-        }
-        public float happiness
-        {
-            get { return myZDO.GetFloat("happiness"); }
-            set { myZDO.Set("happiness", value); }
-        }
+        //////////////////////////////////////////////General stuff
+        public const string RegisteredExpandersIDs = "RegisteredExpandersIDs";
+        public const string RegisteredcraftingstationIDs = "craftingstationIDs";
+        public const string RegisteredwardIDs = "wardIDs";
+        public const string settlementName = "settlementName";
+        public const string happiness = "happiness";
         public int amount_villagers
         {
             get { return myZDO.GetInt("amount_villagers"); }
@@ -56,6 +49,7 @@ namespace Township
             set { myZDO.Set("centerofSOI", value); }
         }
 
+        //////////////////////////////////////////////Proxy stuff
         public bool hasWorkbench
         {
             get { return myZDO.GetBool("hasWorkbench", false); }
@@ -96,23 +90,17 @@ namespace Township
             get { return myZDO.GetInt("amountArtisanStations"); }
             set { myZDO.Set("amountArtisanStations", value); }
         }
-        public bool showExtenderOnMinimap
-        {
-            get { return myZDO.GetBool("showExtenderOnMinimap", false); }
-            set { myZDO.Set("showExtenderOnMinimap", value); }
-        }
-        public const string CshowOnMinimap = "showOnMinimap";
-        public bool showOnMinimap
-        {
-            get { return myZDO.GetBool(CshowOnMinimap, false); }
-            set { myZDO.Set(CshowOnMinimap, value); }
-        }
+        public bool hasWard
+        { get { return myZDO.GetBool("hasWard", false); }
+          set { myZDO.Set("hasWard", value); } }
+        public int amountWards
+        { get { return myZDO.GetInt("amountWards"); }
+          set { myZDO.Set("amountWards", value); } }
+
+        //////////////////////////////////////////////Minimap stuff
+        public const string showOnMinimap = "showOnMinimap";
 
 
-        public static List<string> settlementnames = new List<string>();
-
-
-        public ZDOID centerExpanderID;
 
         /// <summary>
         /// called by Townshipmanager on load
@@ -130,8 +118,10 @@ namespace Township
             myZDOID = myZDO.m_uid;
 
 
-            settlementnames.Add(settlementName);
-            //InvokeRepeating("think", 5f, 5f);
+            settlementnames.Add( myZDO.GetString(settlementName) );
+
+            //Jotunn.Logger.LogDebug("Starting to think");
+            //InvokeRepeating("Think", 5f, 5f);
 
             calcCenterExpander(); // also sets the centerofSOI
 
@@ -179,18 +169,16 @@ namespace Township
 
             Jotunn.Logger.LogDebug("\t populating new ZDO & stuff");
             myZDOID = myZDO.m_uid;
-            settlementName = newname;
-            happiness = 0f;
+            myZDO.Set(settlementName, newname);
+            myZDO.Set(happiness, 0f);
             amount_villagers = 0;
 
-            ZDOIDSet temp = new ZDOIDSet();
-            temp.Add(expander.myID);
-            myZDO.Set(RegisteredExpandersIDs, temp.ToZPackage().GetArray() );
+            RegisterExpander(expander.myID);
 
             calcCenterExpander(); // also sets the centerofSOI
 
-            Jotunn.Logger.LogDebug("Starting to think");
-            //InvokeRepeating("think", 5f, 5f);
+            //Jotunn.Logger.LogDebug("Starting to think");
+            //InvokeRepeating("Think", 5f, 5f);
 
             AllSettleMans.Add(this);
 
@@ -203,6 +191,7 @@ namespace Township
         /// </summary>
         public void onDestroy()
         {
+            Logger.LogInfo("Destroying " + myZDO.GetString(settlementName));
             myZDO.Set(RegisteredExpandersIDs, new ZDOIDSet().ToZPackage().GetArray());
             centerExpanderID = ZDOID.None;
             centerofSOI = new Vector3(0, -10000, 0);
@@ -213,13 +202,22 @@ namespace Township
 
 
 
-        public void think()
+        public void Think()
         {
             //  only the server should run this
             if ( TownshipManager.IsServerorLocal() )
             {
-                happiness += 1;
                 Jotunn.Logger.LogDebug(settlementName + " thinks, therefore it is.");
+                var happiness_t = myZDO.GetFloat(happiness);
+
+
+                if (happiness_t == 0 )
+                    happiness_t = 10;
+                else if (happiness_t == 10)
+                    happiness_t = 0;
+
+
+                myZDO.Set(happiness, happiness_t);
             }
         }
 
@@ -253,10 +251,11 @@ namespace Township
                 if (registeredexpanders.Count() == 0)
                 {
                     Jotunn.Logger.LogWarning("No point in checking connections if there's no Expanders left");
+                    onDestroy();
                     return;
                 }
 
-                int canidate_range = 2000;
+                int canidate_range = 5000;
 
                 Jotunn.Logger.LogDebug("checking connections for " + settlementName);
 
@@ -318,7 +317,7 @@ namespace Township
                     }
                 }
 
-                Jotunn.Logger.LogDebug("Disconnecting old Expanders");
+                Jotunn.Logger.LogDebug("Disconnecting "+ old_expanderIDs.Count() + " old Expanders");
                 // deactivate all the Expanders that aren't in the new list
                 foreach (ZDOID old_expander in old_expanderIDs)
                 {
@@ -404,17 +403,19 @@ namespace Township
             centerofSOI = temp / registeredexpanders.Count();
         }
 
-        public void RegisterExpanderSoul( ZDOID newsoulID )
+        public void RegisterExpander( ZDOID newsoulID, Expander expander = null)
         {
             ZDOIDSet registeredexpanders = GetRegisteredExpanderIDs();
 
-            if ( !registeredexpanders.Contains(newsoulID) )
-                registeredexpanders.Add(newsoulID);
+            if (!registeredexpanders.Add(newsoulID))
+                Jotunn.Logger.LogDebug("expander already contained within registered expanders set");
 
+            //if (expander != null)
+                //addExpanderProxyCraftingStations(expander);
             myZDO.Set(RegisteredExpandersIDs, registeredexpanders.ToZPackage().GetArray());
         }
 
-        public void unRegisterExpanderSoul(ZDOID oldsoulID)
+        public void unRegisterExpander(ZDOID oldsoulID, Expander expander = null )
         {
             ZDOIDSet registeredexpanders = GetRegisteredExpanderIDs();
 
@@ -422,14 +423,16 @@ namespace Township
 
             if(registeredexpanders.Count() == 0)
             {
+                Logger.LogInfo("No expanders left, destroying settlemtent");
                 onDestroy();
                 return;
             }
-
+            //if( expander != null )
+            //removeExpanderProxyCraftingStations(expander);
             myZDO.Set(RegisteredExpandersIDs, registeredexpanders.ToZPackage().GetArray());
         }
 
-        public static SettlementManager registerNewSettlement( Expander firstExpander)
+        public static SettlementManager makeNewSettlement( Expander firstExpander)
         {
             return new SettlementManager(firstExpander);
         }
@@ -444,7 +447,7 @@ namespace Township
             byte[] data = myZDO.GetByteArray(RegisteredExpandersIDs);
             if(data == null)
             {
-                return null;
+                return new ZDOIDSet();
             }
             return ZDOIDSet.From(new ZPackage(data));
         }
@@ -458,7 +461,7 @@ namespace Township
             byte[] data = myZDO.GetByteArray(RegisteredcraftingstationIDs);
             if (data == null)
             {
-                return null;
+                return new ZDOIDSet();
             }
             return ZDOIDSet.From(new ZPackage(data));
         }
@@ -494,7 +497,7 @@ namespace Township
 
             foreach(SettlementManager setman in AllSettleMans)
             {
-                if( setman.settlementName == oldname)
+                if( setman.myZDO.GetString(settlementName) == oldname)
                 {
                     setman.rename(newname);
                     Console.instance.Print("renamend settlement " + oldname + " to " + newname);
@@ -521,7 +524,7 @@ namespace Township
 
             if ( !(local_setman is null) )
             {
-                Console.instance.Print("renamend local settlement " + local_setman.settlementName + " to " + newname);
+                Console.instance.Print("renamend local settlement " + local_setman.myZDO.GetString(settlementName) + " to " + newname);
                 local_setman.rename(newname);
                 return true;
             }
@@ -542,7 +545,7 @@ namespace Township
                 return;
             }
 
-            settlementName = newname;
+            myZDO.Set(settlementName, newname);
             // This is dumb, but have to do it for now
             ZDOIDSet registeredexpanders = GetRegisteredExpanderIDs();
 
@@ -557,7 +560,7 @@ namespace Township
         {
             SettlementManager local_setman = SettlementManager.GetSetManByName(settlementname);
 
-            local_setman.showOnMinimap = true;
+            local_setman.myZDO.Set(showOnMinimap, true);
 
             ZDOIDSet registeredexpanders = local_setman.GetRegisteredExpanderIDs();
             foreach(ZDOID regExp in registeredexpanders)
@@ -571,7 +574,7 @@ namespace Township
         {
             SettlementManager local_setman = SettlementManager.GetSetManByName(settlementname);
 
-            local_setman.showOnMinimap = false;
+            local_setman.myZDO.Set(showOnMinimap, false);
 
             ZDOIDSet registeredexpanders = local_setman.GetRegisteredExpanderIDs();
             foreach (ZDOID regExp in registeredexpanders)
@@ -585,7 +588,7 @@ namespace Township
         {
             foreach (SettlementManager setman in AllSettleMans)
             {
-                Console.instance.Print(setman.settlementName + "\n");
+                Console.instance.Print(setman.myZDO.GetString(settlementName) + "\n");
             }
             List<ZDO> SettlementManagerZDOs = new List<ZDO>();
             ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.instance.settlemanangerprefabname, SettlementManagerZDOs);
@@ -616,7 +619,7 @@ namespace Township
         {
             foreach(SettlementManager setman in AllSettleMans)
             {
-                if (setman.settlementName == setmanname)
+                if (setman.myZDO.GetString(settlementName) == setmanname)
                     return setman;
             }
             return null;
@@ -640,6 +643,37 @@ namespace Township
         public static ZDO GetZDO(ZDOID zdoid)
         {
             return ZDOMan.instance.GetZDO(zdoid);
+        }
+
+
+        /// <summary>
+        /// add Expander's proxy CraftingStations, so they don't get counted unintentionally
+        /// </summary>
+        /// <param name="self"></param>
+        public void addExpanderProxyCraftingStations( Expander self )
+        {
+            ZDOIDSet registeredCraftingStationIDset = GetRegisteredCraftingStationIDs();
+            registeredCraftingStationIDset.Add(self.workbenchProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+            registeredCraftingStationIDset.Add(self.forgeProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+            registeredCraftingStationIDset.Add(self.stonecutterProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+            registeredCraftingStationIDset.Add(self.artisanProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+            myZDO.Set(RegisteredcraftingstationIDs, registeredCraftingStationIDset.ToZPackage().GetArray());
+        }
+
+        /// <summary>
+        /// remove Expander's proxy CraftingStations so they don't stick around
+        /// </summary>
+        /// <param name="self"></param>
+        public void removeExpanderProxyCraftingStations( Expander self )
+        {
+            ZDOIDSet registeredCraftingStationIDset = GetRegisteredCraftingStationIDs();
+
+            registeredCraftingStationIDset.Remove(self.workbenchProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+            registeredCraftingStationIDset.Remove(self.forgeProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+            registeredCraftingStationIDset.Remove(self.stonecutterProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+            registeredCraftingStationIDset.Remove(self.artisanProxy.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
+
+            myZDO.Set(RegisteredcraftingstationIDs, registeredCraftingStationIDset.ToZPackage().GetArray());
         }
 
         public void enableCraftinStationProxy(string craftingstation, ZDOID CSID)
@@ -678,7 +712,7 @@ namespace Township
 
             foreach(Expander expander in loadedExpanders)
             {
-                expander.changeProxyWorkbenches();
+                expander.updateProxyWorkbenches();
             }
         }
 
@@ -732,7 +766,7 @@ namespace Township
 
             foreach (Expander expander in loadedExpanders)
             {
-                expander.changeProxyWorkbenches();
+                expander.updateProxyWorkbenches();
             }
         }
 
