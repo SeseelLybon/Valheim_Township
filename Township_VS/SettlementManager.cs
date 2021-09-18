@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,7 +20,8 @@ namespace Township
     class SettlementManager //SettleMan
     {
         public const string RegisteredExpandersIDs = "RegisteredExpandersIDs";
-        public const string craftingstationIDs = "craftingstationIDs";
+        public const string RegisteredcraftingstationIDs = "craftingstationIDs";
+        public const string RegisteredwardIDs = "wardIDs";
 
         public static List<SettlementManager> AllSettleMans = new List<SettlementManager>();
         public List<Expander> loadedExpanders = new List<Expander>();
@@ -454,7 +455,7 @@ namespace Township
         /// <returns></returns>
         public ZDOIDSet GetRegisteredCraftingStationIDs()
         {
-            byte[] data = myZDO.GetByteArray(craftingstationIDs);
+            byte[] data = myZDO.GetByteArray(RegisteredcraftingstationIDs);
             if (data == null)
             {
                 return null;
@@ -645,14 +646,15 @@ namespace Township
         {
             Jotunn.Logger.LogDebug(settlementName + ": enabling Workbenchproxy " + craftingstation);
 
-            ZDOIDSet registeredexpanders = GetRegisteredExpanderIDs();
-
-            if (!registeredexpanders.Add(CSID))
+            ZDOIDSet registeredCraftingStationIDset = GetRegisteredCraftingStationIDs();
+            if (!registeredCraftingStationIDset.Add(CSID))
                 return;
             else
-                myZDO.Set(RegisteredExpandersIDs, registeredexpanders.ToZPackage().GetArray());
+                myZDO.Set(RegisteredcraftingstationIDs, registeredCraftingStationIDset.ToZPackage().GetArray());
 
 
+
+            // the level of complexity needed to do registered
             if (craftingstation == "$piece_workbench")
             {
                 amountWorkbenches += 1;
@@ -689,11 +691,11 @@ namespace Township
         {
             Jotunn.Logger.LogDebug(settlementName + ": disabling Workbenchproxy " + craftingstation);
 
-            ZDOIDSet registeredexpanders = GetRegisteredExpanderIDs();
-            if (!registeredexpanders.Remove(CSID))
+            ZDOIDSet registeredCraftingStationIDset = GetRegisteredCraftingStationIDs();
+            if (!registeredCraftingStationIDset.Remove(CSID))
                 return;
             else
-                myZDO.Set(RegisteredExpandersIDs, registeredexpanders.ToZPackage().GetArray());
+                myZDO.Set(RegisteredcraftingstationIDs, registeredCraftingStationIDset.ToZPackage().GetArray());
 
             if (craftingstation == "$piece_workbench")
             {
