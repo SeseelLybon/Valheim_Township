@@ -151,7 +151,7 @@ namespace Township
             throw new NotImplementedException();
         }
 
-        public bool Interact(Humanoid user, bool hold)
+        public bool Interact(Humanoid user, bool hold, bool alt)
         {
             throw new NotImplementedException();
         }

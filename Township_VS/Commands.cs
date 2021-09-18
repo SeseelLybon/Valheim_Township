@@ -66,7 +66,7 @@ namespace Township
 
             public override void Run(string[] args)
             {
-                Minimap_Extension.Instance.ShowAllExpanders();
+                patch.Minimap_patch.ShowAllExpanders();
                 Jotunn.Logger.LogDebug("Ran command");
             }
         }
@@ -79,7 +79,7 @@ namespace Township
 
             public override void Run(string[] args)
             {
-                Minimap_Extension.Instance.HideAllExpanders();
+                patch.Minimap_patch.HideAllExpanders();
                 Jotunn.Logger.LogDebug("Ran command");
             }
         }

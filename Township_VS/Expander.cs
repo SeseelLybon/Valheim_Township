@@ -57,13 +57,12 @@ namespace Township
 
             m_nview = GetComponent<ZNetView>();
             m_piece = GetComponent<Piece>();
-            m_tsManager = TownshipManager.Instance;
+            m_tsManager = TownshipManager.instance;
 
 
             if (m_piece.IsPlacedByPlayer())
             {
                 populateproxycraftingstations();
-
 
                 isPlaced = true;
                 Jotunn.Logger.LogDebug("ExpanderBody is placed by player");
@@ -102,7 +101,6 @@ namespace Township
                     //m_nview.Register<bool>("changeActive", RPC_changeActive);
                     // how to invoke RPC
                     // m_nview.InvokeRPC(ZNetView.Everybody, "changeActive", isActive);
-
                     myZDO.m_persistent = true;// Doing this at the end; if a NRE shows up before this, the ZDO will be cleaned when the world closes
                     Jotunn.Logger.LogDebug("Done doing stuff to ExpanderBody\n");
                 }
@@ -115,15 +113,15 @@ namespace Township
         private void findNearbyWorkbenches()
         {
             var pos = myZDO.GetVec3(position, Vector3.zero);
+            Jotunn.Logger.LogDebug("Reminder that findNearbyWorkbenches is called multipletimes at once");
 
             List<ZDO> CS_ZDOs = new List<ZDO>();
-            //ZDOMan.instance.GetAllZDOsWithPrefab("piece_workbench", CS_ZDOs);
+            ZDOMan.instance.GetAllZDOsWithPrefab("piece_workbench", CS_ZDOs);
             foreach(ZDO zdo in CS_ZDOs)
             {
-                //Jotunn.Logger.LogWarning("found workbench zdo's: " + CS_ZDOs.Count() );
                 if(zdo.m_distant == false)
                 {
-                    if( Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange){
+                    if( Vector3.Distance(zdo.m_position, pos) <= TownshipManager.instance.Extender_buildrange){
                         parentSettleMan.enableCraftinStationProxy("$piece_workbench", zdo.m_uid);
                     }
                 }
@@ -133,10 +131,9 @@ namespace Township
             ZDOMan.instance.GetAllZDOsWithPrefab("forge", CS_ZDOs);
             foreach (ZDO zdo in CS_ZDOs)
             {
-                Jotunn.Logger.LogWarning("found forge zdo's: " + CS_ZDOs.Count());
                 if (zdo.m_distant == false)
                 {
-                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange)
+                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.instance.Extender_buildrange)
                     {
                         parentSettleMan.enableCraftinStationProxy("$piece_forge", zdo.m_uid);
                     }
@@ -149,7 +146,7 @@ namespace Township
             {
                 if (zdo.m_distant == false)
                 {
-                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange)
+                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.instance.Extender_buildrange)
                     {
                         parentSettleMan.enableCraftinStationProxy("$piece_stonecutter", zdo.m_uid);
                     }
@@ -162,7 +159,7 @@ namespace Township
             {
                 if (zdo.m_distant == false)
                 {
-                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.Instance.Extender_buildrange)
+                    if (Vector3.Distance(zdo.m_position, pos) <= TownshipManager.instance.Extender_buildrange)
                     {
                         parentSettleMan.enableCraftinStationProxy("$piece_artisanstation", zdo.m_uid);
                     }
@@ -286,7 +283,7 @@ namespace Township
         /* Function is now only for making active or not.
           *  Will later be used to call the GUI
           */
-        public bool Interact(Humanoid user, bool hold)
+        public bool Interact(Humanoid user, bool hold, bool alt)
         {
             Jotunn.Logger.LogDebug("ExpanderBody.Interact()");
             if (!user.IsOwner())
@@ -321,15 +318,15 @@ namespace Township
 
             sb.Append(GetHoverName());
             sb.Append(
-                "\n Active: " + isActive +
-                "\n Connected: " + isConnected +
+                "\n Active: " + myZDO.GetString(isActive) +
+                "\n Connected: " + myZDO.GetString(isConnected) +
                 "\n Expander: " + AllExpanders.Count() +
                 "\n Settlements: " + SettlementManager.AllSettleMans.Count());
             if (!(parentSettleMan == null) ){
                 sb.Append(
                     "\n Settlement name: " + parentSettleMan.settlementName +
                     "\n Settlement ID: " + parentSettleMan.myZDOID +
-                    "\n Connected Expanders: " + parentSettleMan.GetRegisteredExpanders().Count() +
+                    "\n Connected Expanders: " + parentSettleMan.GetRegisteredExpanderIDs().Count() +
                     "\n Workbenches: " + parentSettleMan.amountWorkbenches + "-" + parentSettleMan.hasWorkbench +
                     "\n Forges: " + parentSettleMan.amountForges + "-" + parentSettleMan.hasForge +
                     "\n Stonecutters: " + parentSettleMan.amountStonecutters + "-" + parentSettleMan.hasStonecutter +
@@ -358,7 +355,7 @@ namespace Township
             myZDO.Set(isConnected, true);
             parentSettleMan.loadedExpanders.Add(this);
 
-            findNearbyWorkbenches();
+            findNearbyWorkbenches(); // this is run for every expander in the settlement?!
             changeProxyWorkbenches();
         }
 
@@ -371,13 +368,15 @@ namespace Township
         {
             Jotunn.Logger.LogDebug("SettleMan disconnecting from ExpanderSoul (if it wasn't already)");
             if(!(parentSettleMan == null))
+            {
                 Jotunn.Logger.LogDebug("(Was connected) Disconnecting from" + parentSettleMan.settlementName);
+                parentSettleMan.loadedExpanders.Remove(this);
+                parentSettleMan = null;
+                parentSettleManZDO = null;
+            }
             if (unregister && !(parentSettleMan == null))
                 parentSettleMan.unRegisterExpanderSoul(this.myID);
 
-            parentSettleMan.loadedExpanders.Remove(this);
-            parentSettleMan = null;
-            parentSettleManZDO = null;
             myZDO.Set(parentSettleManID, ZDOID.None);
             myZDO.GetString(settlementName, "None");
             myZDO.Set(isConnected, false);
@@ -476,22 +475,22 @@ namespace Township
             {
                 // TODO: replace townshipinstance thing with config thing
                 if (parentSettleMan.hasWorkbench)
-                    workbenchProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                    workbenchProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.instance.Extender_buildrange;
                 else
                     workbenchProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
 
                 if (parentSettleMan.hasForge)
-                    forgeProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                    forgeProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.instance.Extender_buildrange;
                 else
                     forgeProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
 
                 if (parentSettleMan.hasStonecutter)
-                    stonecutterProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                    stonecutterProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.instance.Extender_buildrange;
                 else
                     stonecutterProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
 
                 if (parentSettleMan.hasArtisanStation)
-                    artisanProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.Instance.Extender_buildrange;
+                    artisanProxy.GetComponent<CraftingStation>().m_rangeBuild = TownshipManager.instance.Extender_buildrange;
                 else
                     artisanProxy.GetComponent<CraftingStation>().m_rangeBuild = 0;
             }

@@ -12,32 +12,30 @@ using Jotunn.Managers;
 using Jotunn.Utils;
 using Logger = Jotunn.Logger;
 
-namespace Township
+
+namespace Township.patch
 {
-    class Minimap_Extension
+    public static class Minimap_patch
     {
-        private Minimap_Extension()
+
+        public static bool firstInit = true;
+        public static void init()
         {
-            On.Minimap.UpdateDynamicPins += Minimap_UpdateDynamicPins;
-            On.Minimap.OnDestroy += Minimap_OnDestroy;
-            On.Minimap.Awake += Minimap_Awake;
+            if (firstInit)
+            {
+                On.Minimap.UpdateDynamicPins += Minimap_UpdateDynamicPins;
+                On.Minimap.OnDestroy += Minimap_OnDestroy;
+                On.Minimap.Awake += Minimap_Awake;
+            }
         }
-        private static Lazy<Minimap_Extension> instance = new Lazy<Minimap_Extension>(() => new Minimap_Extension());
-        public static Minimap_Extension Instance { get { return instance.Value; } }
 
         public const float AreaScale = 2.1f;
 
-        public class AreaPinInfo
-        {
-            public Minimap.PinData Pin;
-            public Minimap.PinData Area;
-        }
-
 
         // a pin+area for each expander
-        public Dictionary<ZDOID, Minimap.PinData> ExpanderPins = new Dictionary<ZDOID, Minimap.PinData>();
+        public static Dictionary<ZDOID, Minimap.PinData> ExpanderPins = new Dictionary<ZDOID, Minimap.PinData>();
         // a pin+name for each settlement using the averaged center
-        public Dictionary<ZDOID, Minimap.PinData> SettlementPins = new Dictionary<ZDOID, Minimap.PinData>();
+        public static Dictionary<ZDOID, Minimap.PinData> SettlementPins = new Dictionary<ZDOID, Minimap.PinData>();
 
         private static void Minimap_Awake(On.Minimap.orig_Awake orig, Minimap self)
         {
@@ -47,16 +45,16 @@ namespace Township
 
         }
 
-        private void Minimap_OnDestroy(On.Minimap.orig_OnDestroy orig, Minimap self)
+        private static void Minimap_OnDestroy(On.Minimap.orig_OnDestroy orig, Minimap self)
         {
             orig(self);
             ExpanderPins.Clear();
-            //SettlementPins.Clear();
+            SettlementPins.Clear();
         }
 
-        int updateinterval = 1; //seconds
-        float updatenextTime = 0;
-        private void Minimap_UpdateDynamicPins(On.Minimap.orig_UpdateDynamicPins orig, Minimap self, float dt)
+        static int updateinterval = 1; //seconds
+        static float updatenextTime = 0;
+        private static void Minimap_UpdateDynamicPins(On.Minimap.orig_UpdateDynamicPins orig, Minimap self, float dt)
         {
             orig(self, dt);
 
@@ -69,7 +67,7 @@ namespace Township
 
                 /// Code for the expanders area's
                 List<ZDO> allExpanderZDOs = new List<ZDO>();
-                ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.Instance.expanderprefabname, allExpanderZDOs);
+                ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.instance.expanderprefabname, allExpanderZDOs);
 
                 foreach (ZDO expanderzdo in allExpanderZDOs)
                 {
@@ -101,7 +99,7 @@ namespace Township
 
                 /// Code for the settlements labels
                 List<ZDO> allSettlementZDOs = new List<ZDO>();
-                ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.Instance.settlemanangerprefabname, allSettlementZDOs);
+                ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.instance.settlemanangerprefabname, allSettlementZDOs);
 
                 foreach (ZDO settlemanZDO in allSettlementZDOs)
                 {
@@ -133,10 +131,10 @@ namespace Township
             }
         }
 
-        public void ShowAllExpanders()
+        public static void ShowAllExpanders()
         {
             List<ZDO> allExpanderZDOs = new List<ZDO>();
-            ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.Instance.expanderprefabname, allExpanderZDOs);
+            ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.instance.expanderprefabname, allExpanderZDOs);
 
             foreach (ZDO expanderzdo in allExpanderZDOs)
             {
@@ -144,10 +142,10 @@ namespace Township
             }
         }
 
-        public void HideAllExpanders()
+        public static void HideAllExpanders()
         {
             List<ZDO> allExpanderZDOs = new List<ZDO>();
-            ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.Instance.expanderprefabname, allExpanderZDOs);
+            ZDOMan.instance.GetAllZDOsWithPrefab(TownshipManager.instance.expanderprefabname, allExpanderZDOs);
 
             foreach (ZDO expanderzdo in allExpanderZDOs)
             {

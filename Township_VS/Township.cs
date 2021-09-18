@@ -38,7 +38,7 @@ namespace Township
         // Phase    - Liquid, Gas, Solid, Plasma, Goth
         // Major    - Milestone within a phase
         // Minor    - Patches or changes or just tweaks.
-        public const string PluginVersion = "0.1.12.15";
+        public const string PluginVersion = "0.1.12.25";
         // Phase    - getting basic totems working
         // Major    - Rewriting SettlementManager  to take the new system.
         
@@ -46,69 +46,33 @@ namespace Township
         // Singleton stuff - boy, I hope my teachers don't see this
         // sourced from https://csharpindepth.com/articles/singleton#lock
         private TownshipManager() { }
-        private static readonly Lazy<TownshipManager> instance = new Lazy<TownshipManager>(() => new TownshipManager());
-        public static TownshipManager Instance { get { return instance.Value; } }
+        private static readonly Lazy<TownshipManager> Instance = new Lazy<TownshipManager>(() => new TownshipManager());
+        public static TownshipManager instance { get { return Instance.Value; } }
 
 
         public readonly string settlemanangerprefabname = "SettleManager";
         public readonly string expanderprefabname = "Expander";
 
-        public GameObject expanderGO;
-        public GameObject settleManGO;
+        public CustomLocalization localization;
 
 
         private void Awake()
         {
             Jotunn.Logger.LogWarning("Hello World, from the Township plugin");
 
-            Jotunn.Logger.LogWarning("Hello World, from the Township plugin");
-
-            ItemManager.OnVanillaItemsAvailable += addPieces;
+            //ItemManager.OnVanillaItemsAvailable += addPieces;
+            PrefabManager.OnVanillaPrefabsAvailable += addPieces;
             //On.ZNet.Start += OnZNetAvailable;
             On.ZNetScene.Update += ZNetScene_Update;
-            On.CraftingStation.Start += CraftingStation_Start;
-            On.Piece.DropResources += Piece_DropResources;
 
-            var minimapextensioninstance = Minimap_Extension.Instance;
+            patch.CraftingStation_patch.init();
+            patch.Minimap_patch.init();
 
             loadLocilizations();
             addCommands();
         }
 
 
-        private void CraftingStation_Start(On.CraftingStation.orig_Start orig, CraftingStation self)
-        {
-            orig(self);
-            if(self.m_nview != null && self.m_nview.GetZDO() != null)
-            {
-                var isinsettlement = SettlementManager.PosInWhichSettlement(self.m_nview.GetZDO().m_position);
-                if (isinsettlement != null)
-                {
-                    isinsettlement.enableCraftinStationProxy(self.m_name, self.m_nview.GetZDO().m_uid);
-                }
-            }
-        }
-
-
-        private void Piece_DropResources(On.Piece.orig_DropResources orig, Piece self)
-        //private void Piece_OnDestroy(On.Piece.orig_OnDestroy orig, Piece self)
-        //private void CraftingStation_OnDestroy(On.CraftingStation.orig_OnDestroy orig, CraftingStation self)
-        {
-            orig(self);
-
-            CraftingStation tempCS;
-            self.TryGetComponent<CraftingStation>(out tempCS);
-            if (tempCS != null)
-            {
-                // only destroy if the object is destroyed, not when unloaded
-                var isinsettlement = SettlementManager.PosInWhichSettlement(self.m_nview.GetZDO().m_position);
-                if (isinsettlement != null)
-                {
-                    Jotunn.Logger.LogDebug("Removing Craftingstation (hopefully)");
-                    isinsettlement.disableCraftinStationProxy(self.m_name, self.GetComponent<CraftingStation>().m_nview.GetZDO().m_uid);
-                }
-            }
-        }
 
         //private void OnZNetAvailable(On.ZNet.orig_Start orig, ZNet self)
         private void ZNetScene_Update(On.ZNetScene.orig_Update orig, ZNetScene self)
@@ -122,8 +86,6 @@ namespace Township
 
             if (IsServerorLocal())
             {
-
-
                 Jotunn.Logger.LogDebug("Loading " +settlemanangerprefabname + " ZDO's from ZDOMan");
                 Jotunn.Logger.LogDebug("Hash: " + settlemanangerprefabname.GetStableHashCode());
 
@@ -132,7 +94,15 @@ namespace Township
                 Jotunn.Logger.LogDebug("Loading " + SettlementManagerZDOs.Count() + " SettleManager ZDO's from ZDOMan");
                 foreach (ZDO setmanzdo in SettlementManagerZDOs)
                 {
-                    new SettlementManager(setmanzdo);
+                    try
+                    {
+                        new SettlementManager(setmanzdo);
+                    } catch ( NullReferenceException nre )
+                    {
+                        //throw new NullReferenceException(nre);
+                        Jotunn.Logger.LogFatal("failed loading a settlement manager");
+                        Jotunn.Logger.LogFatal(nre);
+                    }
                 }
                 Jotunn.Logger.LogDebug("Done Loading " + SettlementManager.AllSettleMans.Count() + " SettleManager ZDO's from ZDOMan\n");
             } 
@@ -144,10 +114,6 @@ namespace Township
         public readonly int connection_range = 30; // range at which a SettlementManager/Expanders can connect
 
         public readonly int SOI_range = 20; // Sphere of Influence
-
-        public CraftingStation TS_CS;
-
-        public GameObject settleMan_GO;
 
         private void addPieces()
         {
@@ -238,14 +204,15 @@ namespace Township
             Jotunn.Logger.LogDebug("Added Extender Totems to pieceTable Hammer");
             */
 
-            ItemManager.OnVanillaItemsAvailable -= addPieces;
+            PrefabManager.OnVanillaPrefabsAvailable -= addPieces;
         }
 
         public void loadLocilizations() {
-            LocalizationManager.Instance.AddLocalization(new LocalizationConfig("English")
-            {
-                Translations =
-                    {
+            localization = new CustomLocalization();
+            LocalizationManager.Instance.AddLocalization(localization);
+
+            localization.AddTranslation( "English",
+                new Dictionary<string, string>{
                         { "piece_TS_Heart", "Heart of the Settlement" },
                         { "piece_TS_Heart_desc", "Gotta tell somethin descritive here at some point" },
 
@@ -262,9 +229,8 @@ namespace Township
                         { "piece_TS_Extender_Stonecutter_desc", "Fulfills the need of a workstation" },
 
                         { "piece_TS_Extender_Artisanstation", "Banner of the Artisan" },
-                        { "piece_TS_Extender_Artisanstation_desc", "Fulfills the need of a workstation" },
-                }
-            });
+                        { "piece_TS_Extender_Artisanstation_desc", "Fulfills the need of a workstation" }
+                });
         }
 
         public void addCommands()

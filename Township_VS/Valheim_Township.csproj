@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\JotunnLib.2.2.7\build\JotunnLib.props" Condition="Exists('..\packages\JotunnLib.2.2.7\build\JotunnLib.props')" />
+  <Import Project="..\packages\JotunnLib.2.3.0\build\JotunnLib.props" Condition="Exists('..\packages\JotunnLib.2.3.0\build\JotunnLib.props')" />
   <Import Project="..\packages\JotunnLib.2.0.7\build\JotunnLib.props" Condition="Exists('..\packages\JotunnLib.2.0.7\build\JotunnLib.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -48,8 +48,8 @@
     <Reference Include="BepInEx">
       <HintPath>D:\SteamLibrary\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
-    <Reference Include="Jotunn, Version=2.2.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\JotunnLib.2.2.7\lib\net462\Jotunn.dll</HintPath>
+    <Reference Include="Jotunn, Version=2.3.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\JotunnLib.2.3.0\lib\net462\Jotunn.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -245,10 +245,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands.cs" />
+    <Compile Include="CraftingStation_patch.cs" />
     <Compile Include="Definer.cs" />
     <Compile Include="Definer_Sub.cs" />
     <Compile Include="Expander.cs" />
-    <Compile Include="Minimap_Extension.cs" />
+    <Compile Include="Minimap_patch.cs" />
     <Compile Include="SettlementManager.cs" />
     <Compile Include="Extender.cs" />
     <Compile Include="Properties\IgnoreAccessModifiers.cs" />
@@ -291,7 +292,6 @@
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\JotunnLib.2.2.7\build\JotunnLib.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\JotunnLib.2.2.7\build\JotunnLib.props'))" />
-    <Error Condition="!Exists('..\packages\JotunnLib.2.2.7\build\JotunnLib.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\JotunnLib.2.2.7\build\JotunnLib.props'))" />
+    <Error Condition="!Exists('..\packages\JotunnLib.2.3.0\build\JotunnLib.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\JotunnLib.2.3.0\build\JotunnLib.props'))" />
   </Target>
 </Project>
